@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SportsQuant</title>
+<link rel="icon" href="data:," />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/app.css" />
+</head>
+<body>
+<div id="top-progress-bar"></div>
+<div id="file-protocol-warning" style="display:none;background:#b91c1c;color:#fff;padding:12px 18px;font-size:13.5px;font-weight:600;text-align:center;line-height:1.5;box-shadow:0 4px 10px rgba(0,0,0,.4);z-index:99999;position:relative;">
+  ⚠️ <strong>Has abierto el HTML como archivo local (file://)</strong>. Para que las predicciones de la IA y las APIs en vivo funcionen, abre una terminal en la carpeta del proyecto, ejecuta: <code style="background:rgba(0,0,0,.4);padding:2px 6px;border-radius:4px;font-family:monospace;color:#fef08a;">python run.py</code> y navega a <a href="http://127.0.0.1:8000" style="color:#fef08a;text-decoration:underline;">http://127.0.0.1:8000</a>.
+</div>
+<div id="shell">
+
+  <div id="topbar">
+    <div class="brand"><span class="dot"></span> SportsQuant <span class="tag" id="tag-paper">paper trading</span></div>
+    <div id="searchbox"><input id="search-input" placeholder="Search teams or competitions..." /></div>
+    <div class="topbar-right">
+      <div id="sync-badge" class="sync-badge" title="Sincronización en directo con APIs oficiales"><span class="sync-dot"></span><span id="sync-text">Sincronizado</span></div>
+      <button class="btn-refresh" id="refresh-btn" title="Recargar partidos en vivo desde las APIs (ESPN / TheSportsDB)"><span class="refresh-ic">🔄</span><span id="txt-reload">Recargar API</span></button>
+      <button class="theme-toggle" id="theme-toggle" title="Alternar tema claro / oscuro" aria-label="Cambiar tema">☀️</button>
+      <div class="lang-toggle">
+        <button data-lang="es" class="active">ES</button>
+        <button data-lang="en">EN</button>
+      </div>
+      <div class="odds-toggle">
+        <button data-fmt="pct" class="active">%</button>
+        <button data-fmt="dec">1.28</button>
+      </div>
+      <div class="wallet"><span class="coin"></span><span class="amt num" id="bankroll-amt">1000.00</span><span class="lbl" id="lbl-bankroll">paper</span></div>
+      <button class="icon-btn" id="bets-btn" title="Mis apuestas simuladas">☰</button>
+    </div>
+  </div>
+
+  <div id="body-row">
+  <div id="rail"></div>
+
+  <div id="main">
+    <div id="col-list">
+      <div id="date-filter"></div>
+      <div id="comp-filter"></div>
+      <div id="match-list"><div class="spin"></div></div>
+    </div>
+    <div id="col-detail">
+      <div id="empty-detail">Pick a match on the left to see live prices.<br>Everything here is a paper-trading demo - not real money, not betting advice.</div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<button id="slip-fab" style="display:none"><span>Bet slip</span><span class="n" id="slip-count">0</span></button>
+<div id="slip-panel">
+  <div class="slip-head"><span>Bet slip</span><button id="slip-clear">Clear</button></div>
+  <div id="slip-legs"></div>
+  <div class="slip-foot">
+    <div class="row"><span>True probability</span><span class="num" id="slip-prob">-</span></div>
+    <div class="row"><span>Fair odds</span><span class="num" id="slip-odds">-</span></div>
+    <input type="number" id="slip-stake" placeholder="Paper stake" value="10" min="1" />
+    <button class="btn-primary" id="slip-place">Place paper bet</button>
+  </div>
+</div>
+
+<button id="chat-fab">💬</button>
+<div id="chat-panel">
+  <div class="chat-head">
+    <div class="title"><span class="dot"></span> Betting assistant</div>
+    <button id="chat-close">✕</button>
+  </div>
+  <div id="chat-msgs"></div>
+  <div class="chat-suggestions">
+    <button data-q="Over 3.5 runs Tampa Bay vs Guardians" id="sug-prop">Over 3.5 runs Tampa</button>
+    <button data-q="Over 4.5 carreras Magallanes vs Caribes" id="sug-carib">⚾ Magallanes vs Caribes</button>
+    <button data-q="value bets">Value bets</button>
+    <button data-q="price my slip">Price my slip</button>
+  </div>
+  <div id="chat-input-row">
+    <input id="chat-input" placeholder="Ask about a match, a parlay, a stake size..." />
+    <button id="chat-send">➤</button>
+  </div>
+</div>
+
+<div id="bets-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;">
+  <div style="max-width:640px;margin:6vh auto;background:var(--panel-2);border:1px solid var(--border);border-radius:12px;max-height:85vh;display:flex;flex-direction:column;">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <strong>My paper bets</strong><button id="bets-close" style="background:none;border:none;color:var(--text-faint);font-size:16px;">✕</button>
+    </div>
+    <div id="bets-list" style="overflow-y:auto;padding:12px 18px;"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

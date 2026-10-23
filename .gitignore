@@ -1,0 +1,38 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment & local credentials
+.env
+.env.local
+
+# Database & SQLite files
+*.db
+*.sqlite
+*.sqlite3
+data/sportsquant.db
+
+# Logs & temp files
+*.log
+scratch/
+.tempmediaStorage/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Testing & linters
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

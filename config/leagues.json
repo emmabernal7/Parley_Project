@@ -1,0 +1,112 @@
+{
+  "soccer": [
+    {"key": "ENG1", "name": "Premier League", "country": "England", "tier": 1, "fd_code": "E0", "espn": "eng.1", "group": "big5"},
+    {"key": "ENG2", "name": "Championship", "country": "England", "tier": 2, "fd_code": "E1", "espn": "eng.2", "group": "big5_lower"},
+    {"key": "ENG3", "name": "League One", "country": "England", "tier": 3, "fd_code": "E2", "espn": "eng.3", "group": "big5_lower"},
+    {"key": "ENG4", "name": "League Two", "country": "England", "tier": 4, "fd_code": "E3", "espn": "eng.4", "group": "big5_lower"},
+    {"key": "ESP1", "name": "La Liga", "country": "Spain", "tier": 1, "fd_code": "SP1", "espn": "esp.1", "group": "big5"},
+    {"key": "ESP2", "name": "La Liga 2", "country": "Spain", "tier": 2, "fd_code": "SP2", "espn": "esp.2", "group": "big5_lower"},
+    {"key": "ITA1", "name": "Serie A", "country": "Italy", "tier": 1, "fd_code": "I1", "espn": "ita.1", "group": "big5"},
+    {"key": "ITA2", "name": "Serie B", "country": "Italy", "tier": 2, "fd_code": "I2", "espn": "ita.2", "group": "big5_lower"},
+    {"key": "GER1", "name": "Bundesliga", "country": "Germany", "tier": 1, "fd_code": "D1", "espn": "ger.1", "group": "big5"},
+    {"key": "GER2", "name": "2. Bundesliga", "country": "Germany", "tier": 2, "fd_code": "D2", "espn": "ger.2", "group": "big5_lower"},
+    {"key": "FRA1", "name": "Ligue 1", "country": "France", "tier": 1, "fd_code": "F1", "espn": "fra.1", "group": "big5"},
+    {"key": "FRA2", "name": "Ligue 2", "country": "France", "tier": 2, "fd_code": "F2", "espn": "fra.2", "group": "big5_lower"},
+    {"key": "POR1", "name": "Primeira Liga", "country": "Portugal", "tier": 1, "fd_code": "P1", "espn": "por.1", "group": "tierB"},
+    {"key": "NED1", "name": "Eredivisie", "country": "Netherlands", "tier": 1, "fd_code": "N1", "espn": "ned.1", "group": "tierB"},
+    {"key": "BEL1", "name": "Jupiler Pro League", "country": "Belgium", "tier": 1, "fd_code": "B1", "espn": "bel.1", "group": "tierB"},
+    {"key": "TUR1", "name": "Super Lig", "country": "Turkiye", "tier": 1, "fd_code": "T1", "espn": "tur.1", "group": "tierB"},
+    {"key": "SCO1", "name": "Scottish Premiership", "country": "Scotland", "tier": 1, "fd_code": "SC0", "espn": "sco.1", "group": "tierB"},
+    {"key": "MLS1", "name": "MLS", "country": "USA", "tier": 1, "fd_code": null, "espn": "usa.1", "group": "tierB"},
+    {"key": "MEX1", "name": "Liga MX", "country": "Mexico", "tier": 1, "fd_code": null, "espn": "mex.1", "group": "tierB"},
+    {"key": "BRA1", "name": "Brasileirao", "country": "Brazil", "tier": 1, "fd_code": null, "espn": "bra.1", "group": "tierB"},
+    {"key": "ARG1", "name": "Liga Profesional", "country": "Argentina", "tier": 1, "fd_code": null, "espn": "arg.1", "group": "tierB"},
+    {"key": "COL1", "name": "Liga BetPlay", "country": "Colombia", "tier": 1, "fd_code": null, "espn": "col.1", "group": "tierB"},
+    {"key": "GRE1", "name": "Super League Greece", "country": "Greece", "tier": 1, "fd_code": "G1", "espn": "gre.1", "group": "tierC"},
+    {"key": "RUS1", "name": "Premier Liga", "country": "Russia", "tier": 1, "fd_code": null, "espn": "rus.1", "group": "tierC"},
+    {"key": "POL1", "name": "Ekstraklasa", "country": "Poland", "tier": 1, "fd_code": null, "espn": "pol.1", "group": "tierC"},
+    {"key": "CZE1", "name": "Chance Liga", "country": "Czechia", "tier": 1, "fd_code": null, "espn": "cze.1", "group": "tierC"},
+    {"key": "CRO1", "name": "HNL", "country": "Croatia", "tier": 1, "fd_code": null, "espn": "cro.1", "group": "tierC"},
+    {"key": "DEN1", "name": "Superliga", "country": "Denmark", "tier": 1, "fd_code": null, "espn": "den.1", "group": "tierC"},
+    {"key": "KSA1", "name": "Saudi Pro League", "country": "Saudi Arabia", "tier": 1, "fd_code": null, "espn": "ksa.1", "group": "tierC"},
+    {"key": "JPN1", "name": "J1 League", "country": "Japan", "tier": 1, "fd_code": null, "espn": "jpn.1", "group": "tierC"},
+    {"key": "UCL", "name": "UEFA Champions League", "country": "Europe", "tier": 0, "fd_code": null, "espn": "uefa.champions", "group": "cup"},
+    {"key": "UEL", "name": "UEFA Europa League", "country": "Europe", "tier": 0, "fd_code": null, "espn": "uefa.europa", "group": "cup"},
+    {"key": "UECL", "name": "UEFA Conference League", "country": "Europe", "tier": 0, "fd_code": null, "espn": "uefa.europa.conf", "group": "cup"},
+    {"key": "ENG_FACUP", "name": "FA Cup", "country": "England", "tier": 0, "fd_code": null, "espn": "eng.fa", "group": "cup"},
+    {"key": "ENG_EFL", "name": "EFL Cup", "country": "England", "tier": 0, "fd_code": null, "espn": "eng.league_cup", "group": "cup"},
+    {"key": "ESP_COPA", "name": "Copa del Rey", "country": "Spain", "tier": 0, "fd_code": null, "espn": "esp.copa_del_rey", "group": "cup"},
+    {"key": "GER_POKAL", "name": "DFB-Pokal", "country": "Germany", "tier": 0, "fd_code": null, "espn": "ger.dfb_pokal", "group": "cup"},
+    {"key": "ITA_COPPA", "name": "Coppa Italia", "country": "Italy", "tier": 0, "fd_code": null, "espn": "ita.coppa_italia", "group": "cup"},
+    {"key": "FRA_COUPE", "name": "Coupe de France", "country": "France", "tier": 0, "fd_code": null, "espn": "fra.coupe_de_france", "group": "cup"},
+    {"key": "LIBERTADORES", "name": "Copa Libertadores", "country": "South America", "tier": 0, "fd_code": null, "espn": "conmebol.libertadores", "group": "cup"},
+    {"key": "SUDAMERICANA", "name": "Copa Sudamericana", "country": "South America", "tier": 0, "fd_code": null, "espn": "conmebol.sudamericana", "group": "cup"},
+    {"key": "CONCACAF_CC", "name": "CONCACAF Champions Cup", "country": "North America", "tier": 0, "fd_code": null, "espn": "concacaf.champions", "group": "cup"},
+    {"key": "FIFA_WORLD_CUP", "name": "FIFA World Cup", "country": "International", "tier": 0, "fd_code": null, "espn": "fifa.world", "group": "international"},
+    {"key": "UEFA_EURO", "name": "UEFA Euro", "country": "Europe", "tier": 0, "fd_code": null, "espn": "uefa.euro", "group": "international"},
+    {"key": "COPA_AMERICA", "name": "Copa America", "country": "South America", "tier": 0, "fd_code": null, "espn": "conmebol.america", "group": "international"},
+    {"key": "UEFA_NL", "name": "UEFA Nations League", "country": "Europe", "tier": 0, "fd_code": null, "espn": "uefa.nations", "group": "international"},
+    {"key": "CONCACAF_NL", "name": "CONCACAF Nations League", "country": "North America", "tier": 0, "fd_code": null, "espn": "concacaf.nations.league", "group": "international"},
+    {"key": "FIFA_FRIENDLY", "name": "International Friendlies", "country": "International", "tier": 0, "fd_code": null, "espn": "fifa.friendly", "group": "international"},
+    {"key": "WC_Q_CONMEBOL", "name": "FIFA World Cup Qualifiers - CONMEBOL", "country": "South America", "tier": 0, "fd_code": null, "espn": "fifa.worldq.conmebol", "group": "international"},
+    {"key": "WC_Q_UEFA", "name": "FIFA World Cup Qualifiers - UEFA", "country": "Europe", "tier": 0, "fd_code": null, "espn": "fifa.worldq.uefa", "group": "international"},
+    {"key": "WC_Q_CONCACAF", "name": "FIFA World Cup Qualifiers - CONCACAF", "country": "North America", "tier": 0, "fd_code": null, "espn": "fifa.worldq.concacaf", "group": "international"},
+    {"key": "WC_Q_AFC", "name": "FIFA World Cup Qualifiers - AFC", "country": "Asia", "tier": 0, "fd_code": null, "espn": "fifa.worldq.afc", "group": "international"},
+    {"key": "WC_Q_CAF", "name": "FIFA World Cup Qualifiers - CAF", "country": "Africa", "tier": 0, "fd_code": null, "espn": "fifa.worldq.caf", "group": "international"}
+  ],
+  "basketball": [
+    {"key": "NBA", "name": "NBA", "espn": "nba"},
+    {"key": "NCAAB", "name": "NCAA Men's Basketball", "espn": "mens-college-basketball"},
+    {"key": "WNBA", "name": "WNBA", "espn": "wnba"},
+    {"key": "EUROLEAGUE", "name": "EuroLeague", "espn": "euroleague"},
+    {"key": "ACB", "name": "Liga ACB (Spain)", "espn": "esp.1"}
+  ],
+  "american_football": [
+    {"key": "NFL", "name": "NFL", "espn": "nfl"},
+    {"key": "NCAAF", "name": "NCAA Football", "espn": "college-football"},
+    {"key": "CFL", "name": "CFL", "espn": "cfl"},
+    {"key": "UFL", "name": "UFL", "espn": "ufl"}
+  ],
+  "hockey": [
+    {"key": "NHL", "name": "NHL", "espn": "nhl"},
+    {"key": "KHL", "name": "KHL", "espn": "khl"},
+    {"key": "IIHF", "name": "IIHF World Championship", "espn": "iihf"}
+  ],
+  "baseball": [
+    {"key": "MLB", "name": "Major League Baseball (MLB)", "country": "USA", "espn": "mlb"},
+    {"key": "LVBP", "name": "Liga Venezolana de Beisbol Profesional (LVBP)", "country": "Venezuela", "espn": "venezuelan-winter-league"},
+    {"key": "LIDOM", "name": "Liga Dominicana de Beisbol (LIDOM)", "country": "Dominican Republic", "espn": "dominican-winter-league"},
+    {"key": "LMP", "name": "Liga Mexicana del Pacifico (LMP)", "country": "Mexico", "espn": "mexican-winter-league"},
+    {"key": "LBPRC", "name": "Liga de Beisbol de Puerto Rico (LBPRC)", "country": "Puerto Rico", "espn": "puerto-rican-winter-league"},
+    {"key": "SERIE_CARIBE", "name": "Serie del Caribe", "country": "Caribbean", "espn": "caribbean-series"},
+    {"key": "WBC", "name": "World Baseball Classic (WBC)", "country": "International", "espn": "world-baseball-classic"}
+  ],
+  "tennis": [
+    {"key": "ATP", "name": "ATP Tour", "espn": "atp"},
+    {"key": "WTA", "name": "WTA Tour", "espn": "wta"},
+    {"key": "AUS_OPEN", "name": "Australian Open", "espn": "australian-open"},
+    {"key": "FRENCH_OPEN", "name": "Roland Garros", "espn": "french-open"},
+    {"key": "WIMBLEDON", "name": "Wimbledon", "espn": "wimbledon"},
+    {"key": "US_OPEN", "name": "US Open", "espn": "us-open"}
+  ],
+  "mma": [
+    {"key": "UFC", "name": "UFC", "espn": "ufc"},
+    {"key": "BELLATOR", "name": "Bellator", "espn": "bellator"},
+    {"key": "PFL", "name": "PFL", "espn": "pfl"},
+    {"key": "ONE", "name": "ONE Championship", "espn": "one"}
+  ],
+  "volleyball": [
+    {"key": "MCVB", "name": "NCAA Men's Volleyball", "espn": "mens-college-volleyball"},
+    {"key": "WCVB", "name": "NCAA Women's Volleyball", "espn": "womens-college-volleyball"},
+    {"key": "FIVB_VNL", "name": "FIVB Volleyball Nations League", "espn": "fivb.vnl"}
+  ],
+  "motorsport": [
+    {"key": "F1", "name": "Formula 1", "espn": "f1"}
+  ],
+  "waterpolo": [
+    {"key": "LEN_CL", "name": "LEN Champions League", "espn": "len.champions"},
+    {"key": "FINA_WC", "name": "World Aquatics Championship", "espn": "fina.world"},
+    {"key": "OLYMPIC_WP", "name": "Olympic Water Polo", "espn": "olympics.waterpolo"},
+    {"key": "LEN_EURO", "name": "European Water Polo Championship", "espn": "len.euro"}
+  ]
+}

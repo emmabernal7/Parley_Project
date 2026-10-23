@@ -1,0 +1,22 @@
+# Edit these, then restart the app. Anything you don't set uses the default in sportsquant/settings.py.
+
+host: 127.0.0.1
+port: 8000
+open_browser: true
+
+# Data providers to poll: "espn" (real scores from live APIs)
+providers: [espn]
+espn_days_ahead: 3          # how many days of upcoming fixtures to pull per league
+poll_live_seconds: 15       # how often live scores refresh
+poll_schedule_seconds: 600  # how often the fixture list refreshes
+
+# Modelling
+lookback_seasons: 3         # seasons of history to fit Dixon-Coles on
+xi: 0.0019                  # time-decay rate per day (~1 year half-life)
+reg: 1.0                    # ridge strength on team strengths (higher = more shrinkage)
+refit_hours: 6              # how often models are refitted with new results
+
+# Paper trading
+bankroll: 1000
+kelly_fraction: 0.25        # quarter-Kelly
+value_min_edge: 0.03        # minimum edge the chat will call out as "value"

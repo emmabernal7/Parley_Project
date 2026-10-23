@@ -1,0 +1,33 @@
+{
+  "_read_me": [
+    "Tiers control how much weight the social layer gives an account - see sportsquant/social/extractor.py.",
+    "tier1_official and tier2_journalists: can set a 'confirmed' flag on a lineup/injury update.",
+    "tier3_community: analytics/aggregator accounts - useful context, but cross-check before treating as fact.",
+    "tier4_banter_and_unverified: entertainment, memes, rumours and parody accounts named in the project brief.",
+    "  Never used as a factual signal, even indirectly - sentiment only, and only if you explicitly want it.",
+    "This list needs your own review: handles change hands, accounts get suspended, and 'is this account",
+    "actually satire' is a judgement call Claude did not verify one at a time. Treat it as a starting point.",
+    "Reading any of this requires your own X API bearer token in .env (X_BEARER_TOKEN) - see README.md",
+    "and docs/model_guide.tex section 8 for why that is not free, and roughly what it costs."
+  ],
+  "tier1_official": {
+    "note": "League and club verified accounts. Add the ones for the competitions you follow - handle per club/league.",
+    "examples": ["@premierleague", "@LaLiga", "@SerieA", "@Ligue1", "@Bundesliga_EN", "@ChampionsLeague"]
+  },
+  "tier2_journalists": {
+    "note": "Credentialed reporters with a track record of confirmed (not just claimed) lineup/transfer news.",
+    "accounts": ["FabrizioRomano", "David_Ornstein", "Plettigoal", "reshadrahman", "2010MisterChip", "philipp_koundouros"]
+  },
+  "tier3_community": {
+    "note": "Analytics, aggregator and fan-media accounts named in the project brief - good context, verify before treating as news.",
+    "accounts": ["FootballMeetsD", "BundesligaAnal1", "ManagingBarca", "BarcaUniversal", "PSGINTEL", "InTransfer_it",
+                "ArchivoVAR", "brfootball", "433", "ESPNTenis", "footyxtrahq", "NealGardnerHQ"]
+  },
+  "tier4_banter_and_unverified": {
+    "note": "Named in the project brief as popular banter/rumour/parody accounts, including some the user identified as parody outright (e.g. Fabrizio Romano parody accounts). Sentiment/entertainment only - never a factual trigger, and never decoded or treated as a source of confirmed news.",
+    "accounts": ["HaterCentral", "UTDTrey", "CFC_Janty", "SpeedyMsh", "AbzFCB", "CFC_OBED", "UTDPatty", "UtdJBT",
+                "MusialaEra", "FreddyLA7", "TrollFootball", "SarkCFC", "BarsaARG", "nocontextfooty", "KalshiFC",
+                "TheEuropeanLad", "fiago7", "somhiseremfcb", "radiofcb", "mundodespectivo", "elroncerodelfcb",
+                "BlxckNews", "TouchlineX", "GxldePaulinho", "Paralyticss", "fabrizioromano_parody_accounts"]
+  }
+}
