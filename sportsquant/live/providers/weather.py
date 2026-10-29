@@ -5,12 +5,18 @@ import logging
 from datetime import datetime
 from typing import Dict, Optional
 
-import requests
+import httpx
 
 log = logging.getLogger(__name__)
 GEOCODE = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST = "https://api.open-meteo.com/v1/forecast"
-TIMEOUT = 6
+TIMEOUT = 6.0
+
+_client = httpx.Client(
+    timeout=TIMEOUT,
+    limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+    follow_redirects=True,
+)
 
 WMO_CODE = {0: "Clear", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast", 45: "Fog", 48: "Fog",
             51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle", 61: "Light rain", 63: "Rain",
@@ -20,10 +26,12 @@ WMO_CODE = {0: "Clear", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast", 45
 
 def geocode(city: str, country: Optional[str] = None) -> Optional[Dict]:
     try:
-        r = requests.get(GEOCODE, params={"name": city, "count": 5}, timeout=TIMEOUT)
-        r.raise_for_status()
-        results = r.json().get("results") or []
-    except requests.RequestException as e:
+        r = _client.get(GEOCODE, params={"name": city, "count": 5})
+        if r.status_code == 200:
+            results = r.json().get("results") or []
+        else:
+            return None
+    except Exception as e:
         log.info("geocoding failed for %s: %s", city, e)
         return None
     if country:
@@ -35,13 +43,15 @@ def geocode(city: str, country: Optional[str] = None) -> Optional[Dict]:
 
 def forecast_at(lat: float, lon: float, when: datetime) -> Optional[Dict]:
     try:
-        r = requests.get(FORECAST, params={
+        r = _client.get(FORECAST, params={
             "latitude": lat, "longitude": lon, "timezone": "UTC",
             "hourly": "temperature_2m,precipitation,wind_speed_10m,wind_gusts_10m,weather_code",
-        }, timeout=TIMEOUT)
-        r.raise_for_status()
-        h = r.json().get("hourly", {})
-    except requests.RequestException as e:
+        })
+        if r.status_code == 200:
+            h = r.json().get("hourly", {})
+        else:
+            return None
+    except Exception as e:
         log.info("forecast failed for (%s,%s): %s", lat, lon, e)
         return None
     times = h.get("time", [])

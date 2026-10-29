@@ -35,8 +35,13 @@ class ToolBox:
     # ------------------------------------------------------------------ value
     def find_value(self, sport: Optional[str] = None, min_edge: Optional[float] = None) -> List[Dict]:
         min_edge = get_settings().value_min_edge if min_edge is None else min_edge
+        events_with_odds = self.store.get_events_with_user_odds()
+        if not events_with_odds:
+            return []
         out = []
         for brief in self.live.list_events(sport=sport):
+            if brief["id"] not in events_with_odds:
+                continue
             ev = self.live.get_event(brief["id"])
             if ev is None or ev.status == "finished":
                 continue

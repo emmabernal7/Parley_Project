@@ -1,0 +1,44 @@
+{
+  "venezuelan-winter-league": {
+    "comp": "Liga Venezolana de Beisbol Profesional (LVBP)",
+    "games": [
+      ["Navegantes del Magallanes", "Caribes de Anzoátegui", "Estadio José Bernardo Pérez", "Valencia", "Venezuela", 23, 0],
+      ["Leones del Caracas", "Tiburones de La Guaira", "Estadio Monumental Simón Bolívar", "Caracas", "Venezuela", 23, 30],
+      ["Cardenales de Lara", "Tigres de Aragua", "Estadio Antonio Herrera Gutiérrez", "Barquisimeto", "Venezuela", 23, 0],
+      ["Águilas del Zulia", "Bravos de Margarita", "Estadio Luis Aparicio 'El Grande'", "Maracaibo", "Venezuela", 23, 0]
+    ]
+  },
+  "dominican-winter-league": {
+    "comp": "Liga Dominicana de Beisbol (LIDOM)",
+    "games": [
+      ["Tigres del Licey", "Águilas Cibaeñas", "Estadio Quisqueya Juan Marichal", "Santo Domingo", "República Dominicana", 23, 30],
+      ["Leones del Escogido", "Toros del Este", "Estadio Francisco Micheli", "La Romana", "República Dominicana", 23, 30],
+      ["Gigantes del Cibao", "Estrellas Orientales", "Estadio Julián Javier", "San Francisco de Macorís", "República Dominicana", 23, 0]
+    ]
+  },
+  "mexican-winter-league": {
+    "comp": "Liga Mexicana del Pacifico (LMP)",
+    "games": [
+      ["Naranjeros de Hermosillo", "Mayos de Navojoa", "Estadio Fernando Valenzuela", "Hermosillo", "México", 2, 30],
+      ["Tomateros de Culiacán", "Venados de Mazatlán", "Estadio Tomateros", "Culiacán", "México", 2, 0],
+      ["Charros de Jalisco", "Yaquis de Obregón", "Estadio Panamericano", "Zapopan", "México", 1, 30],
+      ["Águilas de Mexicali", "Cañeros de Los Mochis", "Estadio El Nido de los Águilas", "Mexicali", "México", 2, 30],
+      ["Algodoneros de Guasave", "Sultanes de Monterrey", "Kuroda Park", "Guasave", "México", 1, 30]
+    ]
+  },
+  "puerto-rican-winter-league": {
+    "comp": "Liga de Beisbol de Puerto Rico (LBPRC)",
+    "games": [
+      ["Criollos de Caguas", "Indios de Mayagüez", "Estadio Yldefonso Solá Morales", "Caguas", "Puerto Rico", 23, 15],
+      ["Cangrejeros de Santurce", "Gigantes de Carolina", "Estadio Hiram Bithorn", "San Juan", "Puerto Rico", 23, 15],
+      ["Leones de Ponce", "Senadores de San Juan", "Estadio Francisco Montaner", "Ponce", "Puerto Rico", 23, 15]
+    ]
+  },
+  "caribbean-series": {
+    "comp": "Serie del Caribe",
+    "games": [
+      ["Tiburones de La Guaira (VEN)", "Tigres del Licey (DOM)", "Estadio Monumental Simón Bolívar", "Caracas", "Venezuela", 0, 0],
+      ["Naranjeros de Hermosillo (MEX)", "Criollos de Caguas (PUR)", "Estadio Jorge Luis García Carneiro", "La Guaira", "Venezuela", 19, 30]
+    ]
+  }
+}

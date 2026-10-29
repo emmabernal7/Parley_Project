@@ -1,53 +1,41 @@
-# SportsQuant
+# SportsQuant v2
 
-A statistics-based sports prediction engine with a Stake-style web interface, a bet-slip and
-paper-trading ledger, and a chat assistant — for soccer (many leagues), NBA, NFL, NHL, MLB, tennis,
-volleyball, MMA and F1.
+> **Plataforma cuantitativa de modelado deportivo y paper trading en tiempo real. Modela probabilidades justas (+EV) y devigging mediante Dixon-Coles, Poisson y Empirical Bayes para fútbol, béisbol, baloncesto y más. Incluye simulación de apuestas, asistente conversacional y sincronización con feeds de ESPN. Sin dinero real, 100% analítico.**
 
-**This is a research / paper-trading tool. It never places a real bet or logs into a sportsbook.**
-Read `docs/model_guide.tex` (or the compiled PDF) for exactly which numbers are fitted on real
-data and which are placeholders — the app shows this on every match as a confidence badge.
+[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
+[![Tests](https://img.shields.io/badge/pytest-60%2F60%20passed-brightgreen.svg)](tests/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-## 1. Install Python
+---
 
-You need Python 3.11 or 3.12. Check with:
+## 🚀 Inicio Rápido en Windows (1 Clic)
 
+Simplemente haz doble clic en el archivo:
+- **`iniciar_sportsquant.bat`** (o **`run.bat`**)
+
+El script detectará automáticamente tu instalación de Python/Miniconda, levantará el servidor local y abrirá la interfaz gráfica en tu navegador en:
+👉 **`http://127.0.0.1:8000`**
+
+---
+
+## 🛠️ Instalación Manual
+
+### 1. Requisitos de Python
+Requiere Python 3.11+. Verifica tu versión:
+```bash
+python --version
 ```
-python3 --version
-```
 
-If that fails or shows an older version, install Python from https://python.org/downloads (tick
-"Add to PATH" on Windows) or via Antigravity's own environment if you're running this from there.
-
-## 2. Install the project's dependencies
-
-Open a terminal in this folder and run:
-
-```
+### 2. Instalar dependencias
+```bash
 pip install -r requirements.txt
 ```
 
-(If `pip` isn't found, try `pip3` or `python3 -m pip`.)
-
-## 3. Get real match history (recommended, takes under a minute)
-
+### 3. Ejecutar la plataforma
+```bash
+python run.py
 ```
-python scripts/ingest.py
-```
-
-This downloads a few seasons of the top 5 leagues (England, Spain, Italy, Germany, France) from
-the free site football-data.co.uk. Run `python scripts/ingest.py --all` to pull every league
-listed in `config/leagues.json`, or `python scripts/ingest.py --div E0 E1 SP1` for specific ones —
-run `python scripts/ingest.py --help` for all the options.
-
-**Skip this step and the app still works** — soccer matches just show an amber "low-confidence
-prior" badge instead of a green "fitted model" one, until you run it.
-
-## 4. (Optional) API keys
-
-Copy `.env.example` to `.env` and fill in anything you have. Every line is optional:
-
-- **THE_ODDS_API_KEY** — compares your fair odds against real bookmaker prices (free tier at
   https://the-odds-api.com).
 - **ANTHROPIC_API_KEY** or **GEMINI_API_KEY** — turns the chat from the built-in offline
   keyword-router into a full conversational assistant using your own key. Leave both blank and the

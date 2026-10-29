@@ -214,13 +214,31 @@ def delete_bet(bet_id: int):
 
 
 def main() -> None:
+    import threading
+    import time
+    import urllib.request
     import uvicorn
+
     s = get_settings()
     if s.open_browser:
-        try:
-            webbrowser.open(f"http://{s.host}:{s.port}")
-        except Exception:
-            pass
+        def _wait_and_open():
+            url = f"http://{s.host}:{s.port}"
+            for _ in range(60):  # Poll up to 12s until server is responsive
+                time.sleep(0.2)
+                try:
+                    with urllib.request.urlopen(url, timeout=1) as resp:
+                        if resp.status == 200:
+                            webbrowser.open(url)
+                            return
+                except Exception:
+                    pass
+            try:
+                webbrowser.open(url)
+            except Exception:
+                pass
+
+        threading.Thread(target=_wait_and_open, daemon=True).start()
+
     uvicorn.run("sportsquant.web.app:app", host=s.host, port=s.port, reload=False)
 
 

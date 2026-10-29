@@ -74,11 +74,6 @@
   ],
   "baseball": [
     {"key": "MLB", "name": "Major League Baseball (MLB)", "country": "USA", "espn": "mlb"},
-    {"key": "LVBP", "name": "Liga Venezolana de Beisbol Profesional (LVBP)", "country": "Venezuela", "espn": "venezuelan-winter-league"},
-    {"key": "LIDOM", "name": "Liga Dominicana de Beisbol (LIDOM)", "country": "Dominican Republic", "espn": "dominican-winter-league"},
-    {"key": "LMP", "name": "Liga Mexicana del Pacifico (LMP)", "country": "Mexico", "espn": "mexican-winter-league"},
-    {"key": "LBPRC", "name": "Liga de Beisbol de Puerto Rico (LBPRC)", "country": "Puerto Rico", "espn": "puerto-rican-winter-league"},
-    {"key": "SERIE_CARIBE", "name": "Serie del Caribe", "country": "Caribbean", "espn": "caribbean-series"},
     {"key": "WBC", "name": "World Baseball Classic (WBC)", "country": "International", "espn": "world-baseball-classic"}
   ],
   "tennis": [
@@ -102,11 +97,5 @@
   ],
   "motorsport": [
     {"key": "F1", "name": "Formula 1", "espn": "f1"}
-  ],
-  "waterpolo": [
-    {"key": "LEN_CL", "name": "LEN Champions League", "espn": "len.champions"},
-    {"key": "FINA_WC", "name": "World Aquatics Championship", "espn": "fina.world"},
-    {"key": "OLYMPIC_WP", "name": "Olympic Water Polo", "espn": "olympics.waterpolo"},
-    {"key": "LEN_EURO", "name": "European Water Polo Championship", "espn": "len.euro"}
   ]
 }

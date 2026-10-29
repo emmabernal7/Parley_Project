@@ -6,12 +6,12 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 SPORTS = ["soccer", "basketball", "baseball", "american_football", "hockey", "tennis", "mma",
-          "volleyball", "motorsport", "waterpolo"]
+          "volleyball", "motorsport"]
 
 SPORT_LABELS = {
     "soccer": "Soccer", "basketball": "Basketball", "baseball": "Baseball",
     "american_football": "American Football", "hockey": "Ice Hockey", "tennis": "Tennis",
-    "mma": "MMA", "volleyball": "Volleyball", "motorsport": "Formula 1", "waterpolo": "Water Polo",
+    "mma": "MMA", "volleyball": "Volleyball", "motorsport": "Formula 1",
 }
 
 

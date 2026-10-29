@@ -459,9 +459,21 @@ class ChatEngine:
     def _get_session(self, session_id: str) -> Dict:
         now = time.time()
         self.session_last_active[session_id] = now
+        if session_id not in self.sessions:
+            if hasattr(self.tools, "store") and hasattr(self.tools.store, "get_chat_session"):
+                persisted = self.tools.store.get_chat_session(session_id)
+                if persisted:
+                    self.sessions[session_id] = persisted
         if len(self.sessions) > self.max_sessions:
             self._cleanup_old_sessions(now)
         return self.sessions[session_id]
+
+    def _save_session(self, session_id: str, session: Dict) -> None:
+        if hasattr(self.tools, "store") and hasattr(self.tools.store, "save_chat_session"):
+            try:
+                self.tools.store.save_chat_session(session_id, session)
+            except Exception as e:
+                log.debug("could not persist chat session %s: %s", session_id, e)
 
     def _cleanup_old_sessions(self, now: float) -> None:
         expired = [sid for sid, last in self.session_last_active.items() if now - last > self.ttl_seconds]
@@ -499,6 +511,7 @@ class ChatEngine:
             log.warning("chat provider failed (%s), falling back to offline: %s", used, e)
             text = self.offline.reply(message, session)
             used = "offline (fallback)"
+        self._save_session(session_id, session)
         return {"reply": text, "provider": used}
 
     def add_to_slip(self, session_id: str, event_id: str, key: str, odds: Optional[float] = None) -> List[dict]:
@@ -509,11 +522,13 @@ class ChatEngine:
         if odds is not None:
             leg["odds"] = odds
         slip.append(leg)
+        self._save_session(session_id, session)
         return slip
 
     def clear_slip(self, session_id: str) -> None:
         session = self._get_session(session_id)
         session["slip"] = []
+        self._save_session(session_id, session)
 
     def get_slip(self, session_id: str) -> List[dict]:
         session = self._get_session(session_id)

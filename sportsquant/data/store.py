@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS slips (
     pnl REAL DEFAULT 0, settled_at TEXT, note TEXT);
 CREATE TABLE IF NOT EXISTS user_odds (
     event_id TEXT, key TEXT, odds REAL, updated_at TEXT, PRIMARY KEY (event_id, key));
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    session_id TEXT PRIMARY KEY, data TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS predictions_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT, event_id TEXT, key TEXT, prob REAL, odds_market REAL, model TEXT);
 """
@@ -72,10 +74,23 @@ class Store:
 
     # ------------------------------------------------------------------ soccer matches (wide table)
     def save_matches(self, df: pd.DataFrame) -> None:
+        if df.empty:
+            return
         d = df.copy()
         d["date"] = pd.to_datetime(d["date"]).dt.strftime("%Y-%m-%d")
         with self.conn() as c:
-            d.to_sql("matches", c, if_exists="replace", index=False)
+            has = c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='matches'").fetchone()
+            if not has:
+                d.to_sql("matches", c, if_exists="replace", index=False)
+            else:
+                existing = pd.read_sql_query("SELECT * FROM matches", c)
+                if len(existing) and "match_id" in existing.columns and "match_id" in d.columns:
+                    existing = existing[~existing["match_id"].isin(d["match_id"])]
+                    combined = pd.concat([existing, d], ignore_index=True)
+                else:
+                    combined = d
+                combined.to_sql("matches", c, if_exists="replace", index=False)
+            c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_matches_id ON matches(match_id)")
             c.execute("CREATE INDEX IF NOT EXISTS ix_matches_league ON matches(league, date)")
 
     def load_matches(self, league: Optional[str] = None, since: Optional[str] = None) -> pd.DataFrame:
@@ -135,6 +150,26 @@ class Store:
     def get_user_odds(self, event_id: str) -> Dict[str, float]:
         with self.conn() as c:
             return {r["key"]: r["odds"] for r in c.execute("SELECT key, odds FROM user_odds WHERE event_id=?", (event_id,))}
+
+    def get_events_with_user_odds(self) -> set[str]:
+        with self.conn() as c:
+            return {r["event_id"] for r in c.execute("SELECT DISTINCT event_id FROM user_odds")}
+
+    # ------------------------------------------------------------------ chat sessions
+    def get_chat_session(self, session_id: str) -> Dict:
+        with self.conn() as c:
+            row = c.execute("SELECT data FROM chat_sessions WHERE session_id=?", (session_id,)).fetchone()
+            if row:
+                try:
+                    return json.loads(row["data"])
+                except Exception:
+                    pass
+        return {}
+
+    def save_chat_session(self, session_id: str, data: Dict) -> None:
+        with self.conn() as c:
+            c.execute("INSERT OR REPLACE INTO chat_sessions (session_id, data, updated_at) VALUES (?, ?, ?)",
+                      (session_id, json.dumps(data, default=str), datetime.now(timezone.utc).isoformat()))
 
     # ------------------------------------------------------------------ paper slips
     def add_slip(self, stake: float, legs: List[dict], note: str = "") -> int:

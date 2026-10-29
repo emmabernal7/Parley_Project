@@ -15,10 +15,10 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 
 from ..data.store import Store
-from ..engines.others import MMAEngine, TennisEngine, VolleyballEngine, WaterpoloEngine, settle_generic
+from ..engines.others import MMAEngine, TennisEngine, VolleyballEngine, settle_generic
 from ..engines.soccer import settle_soccer, state_from_event
 from ..events import Event, SPORTS
-from ..live.providers import espn, sofascore, thesportsdb, weather
+from ..live.providers import espn, sofascore, weather
 from ..live.providers.sim_demo import all_demo_events
 from ..markets.schema import flatten
 from ..models.elo import elo_to_goal_rates
@@ -86,7 +86,6 @@ class LiveManager:
             self._last_schedule = now
             if "espn" in s.providers:
                 self._refresh_espn()
-            self._refresh_thesportsdb()
             self._refresh_sofascore()
         self._prune()
 
@@ -142,16 +141,6 @@ class LiveManager:
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
             list(executor.map(_fetch_one, tasks))
 
-    def _refresh_thesportsdb(self) -> None:
-        try:
-            evs = thesportsdb.fetch("", days_ahead=get_settings().espn_days_ahead)
-            with self._lock:
-                for e in evs:
-                    if e.id not in self.events:
-                        self.events[e.id] = e
-        except Exception:
-            log.exception("TheSportsDB refresh failed")
-
     def _prune(self) -> None:
         s = get_settings()
         cutoff = datetime.now(timezone.utc).timestamp() - 6 * 3600
@@ -161,7 +150,7 @@ class LiveManager:
 
     def quick_main_market(self, ev: Event) -> Optional[Dict]:
         now = time.time()
-        ttl = 2.5 if ev.status == "live" else 120.0
+        ttl = 2.5 if ev.status == "live" else 300.0
         if ev.id in self._main_market_cache:
             ts, cached_g0 = self._main_market_cache[ev.id]
             if now - ts < ttl:
@@ -244,23 +233,13 @@ class LiveManager:
             groups = eng.markets(ev)
             info = eng.info(ev)
         elif ev.sport == "tennis":
-            p_win = ev.meta.get("p_win_a", 0.5)
-            eng = TennisEngine(ev.home, ev.away, p_win, ev.meta.get("best_of", 3),
-                               model_label="Elo-style prior + exact Markov chain" if ev.source != "demo" else "Demo prior",
-                               confidence="low" if ev.source != "demo" else "demo")
+            eng = self.models.tennis_engine(ev)
             groups, info = eng.markets(ev), eng.info(ev)
         elif ev.sport == "volleyball":
-            eng = VolleyballEngine(ev.home, ev.away, ev.meta.get("p_win_a", 0.5), ev.meta.get("best_of", 5))
+            eng = self.models.volleyball_engine(ev)
             groups, info = eng.markets(ev), eng.info(ev)
         elif ev.sport == "mma":
-            eng = MMAEngine(ev.home, ev.away, ev.meta.get("p_win_a", 0.5), ev.meta.get("rounds", 3))
-            groups, info = eng.markets(ev), eng.info(ev)
-        elif ev.sport == "waterpolo":
-            lam = float(ev.meta.get("lam", 11.2) or 11.2)
-            mu = float(ev.meta.get("mu", 9.6) or 9.6)
-            eng = WaterpoloEngine(ev.home, ev.away, lam, mu,
-                                  model_label="Waterpolo Poisson ratings" if ev.source != "demo" else "Demo prior",
-                                  confidence="ok" if ev.source != "demo" else "demo")
+            eng = self.models.mma_engine(ev)
             groups, info = eng.markets(ev), eng.info(ev)
         else:
             groups, info = [], {"model": "not yet implemented", "confidence": "low"}

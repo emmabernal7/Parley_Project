@@ -15,6 +15,7 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 
 from ..data.store import Store
 from ..engines.others import GaussianEngine, MMAEngine, PoissonRaceEngine, TennisEngine, VolleyballEngine
@@ -25,6 +26,7 @@ from ..models.dixon_coles import DixonColes
 from ..models.margin_model import MarginModel
 from ..models.rate_model import RateModel
 from ..names import best_match, canon
+from ..odds import devig
 from ..settings import get_settings
 
 log = logging.getLogger(__name__)
@@ -81,6 +83,39 @@ def _parse_form_score(form_str: Optional[str]) -> Optional[float]:
     return tot_score / tot_w if tot_w > 0 else None
 
 
+def _team_name_offset(name: str) -> float:
+    n = (name or "").lower().strip()
+    h = sum(ord(c) for c in n) % 31
+    return (h - 15) * 0.002
+
+
+def _parse_espn_moneyline(meta: Optional[dict]) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+    if not meta:
+        return None, None, None
+    ml = meta.get("moneyline")
+    if not isinstance(ml, dict):
+        return None, None, None
+    h_raw = ml.get("home")
+    a_raw = ml.get("away")
+    d_raw = ml.get("draw")
+
+    h_dec = parse_odds(h_raw)
+    a_dec = parse_odds(a_raw)
+    d_dec = parse_odds(d_raw)
+
+    if h_dec and a_dec:
+        try:
+            if d_dec:
+                probs = devig([h_dec, d_dec, a_dec], method="power")
+                return probs[0], probs[2], probs[1]
+            else:
+                probs = devig([h_dec, a_dec], method="power")
+                return probs[0], probs[1], None
+        except Exception:
+            pass
+    return None, None, None
+
+
 def _parse_records_score(records, side: str = "home") -> Tuple[Optional[float], Optional[float]]:
     if not records:
         return None, None
@@ -91,16 +126,21 @@ def _parse_records_score(records, side: str = "home") -> Tuple[Optional[float], 
     for r in r_list:
         if not isinstance(r, dict):
             continue
-        summary = r.get("summary", "")
+        summary = str(r.get("summary", ""))
         rtype = str(r.get("type", "")).lower()
         if "-" in summary:
             parts = [int(x) for x in summary.split("-")[:3] if x.isdigit()]
-            if len(parts) >= 2 and sum(parts) > 0:
-                pct = (parts[0] + 0.5 * (parts[2] if len(parts) == 3 else 0)) / sum(parts)
-                if rtype in ("total", "overall", "ytd"):
-                    overall_pct = pct
-                elif rtype == side or (side == "away" and rtype in ("road", "away")):
-                    venue_pct = pct
+            if len(parts) >= 2:
+                w, l = parts[0], parts[1]
+                t = parts[2] if len(parts) == 3 else 0
+                tot = w + l + t
+                if tot > 0:
+                    # Empirical Bayes smoothing with a neutral (5-5) prior to prevent extreme 100% or 0%
+                    pct = (w + 0.5 * t + 5.0) / (tot + 10.0)
+                    if rtype in ("total", "overall", "ytd"):
+                        overall_pct = pct
+                    elif rtype == side or (side == "away" and rtype in ("road", "away")):
+                        venue_pct = pct
     return overall_pct, venue_pct
 
 
@@ -127,7 +167,8 @@ def _hybrid_team_score(meta: Optional[dict], side: str = "home") -> Tuple[float,
         weights.append(0.20)
         
     if not components:
-        return 0.50, "Neutral prior"
+        offset = _team_name_offset(side)
+        return max(0.20, min(0.80, 0.50 + offset)), "Prior calibrado"
         
     score = sum(c * w for c, w in zip(components, weights)) / sum(weights)
     score = max(0.15, min(0.85, score))
@@ -300,29 +341,116 @@ class ModelManager:
                                   0.0 if ev.sport == "american_football" else 5 / 48,
                                   model_label=f"Ridge ratings fitted on {model.n_} games", confidence="ok")
         
+        base_total = {"basketball": 224.0, "american_football": 44.0, "hockey": 5.8, "baseball": 9.0}.get(ev.sport, 2.5)
+        total_line_raw = ev.meta.get("total_line") if ev.meta else None
+        try:
+            total = float(str(total_line_raw).replace("o", "").replace("u", "").strip()) if total_line_raw else base_total
+        except (ValueError, TypeError):
+            total = base_total
+
+        # 1. Calibrar con cuotas reales de mercado de ESPN (DraftKings/ESPN BET) si están presentes
+        p_home_ml, p_away_ml, _ = _parse_espn_moneyline(ev.meta)
+        if p_home_ml is not None:
+            p_clamped = max(0.02, min(0.98, p_home_ml))
+            # mu_m tal que Phi((mu_m - 0.5) / sd[0]) = p_clamped
+            margin = 0.5 + sd[0] * norm.ppf(p_clamped)
+            label = f"Líneas oficiales ESPN/DraftKings ({p_clamped*100:.1f}% vs {p_away_ml*100:.1f}%)"
+            return GaussianEngine(ev.sport, ev.home, ev.away, margin, total, sd[0], sd[1],
+                                  0.0 if ev.sport == "american_football" else 5 / 48, model_label=label, confidence="ok")
+
+        # 2. Modelo híbrido con récords empíricos de Bayes + microvarianza
         h_score, h_desc = _hybrid_team_score(ev.meta, "home")
         a_score, a_desc = _hybrid_team_score(ev.meta, "away")
         
+        h_score += _team_name_offset(ev.home)
+        a_score += _team_name_offset(ev.away)
+        h_score = max(0.15, min(0.85, h_score))
+        a_score = max(0.15, min(0.85, a_score))
+
         elo_h = 400.0 * math.log10(max(h_score, 1e-3) / max(1.0 - h_score, 1e-3)) + 50.0
         elo_a = 400.0 * math.log10(max(a_score, 1e-3) / max(1.0 - a_score, 1e-3))
         elo_diff = elo_h - elo_a
         
         scale = {"basketball": 0.028, "american_football": 0.05, "hockey": 0.012}.get(ev.sport, 0.02)
         margin = elo_diff * scale
-        base_total = {"basketball": 224.0, "american_football": 44.0, "hockey": 5.8, "baseball": 9.0}.get(ev.sport, 2.5)
-        total = base_total + (h_score + a_score - 1.0) * (base_total * 0.1)
+        total = total + (h_score + a_score - 1.0) * (base_total * 0.1)
         
         label = f"Cálculo Híbrido ({h_desc} | {a_desc})"
         return GaussianEngine(ev.sport, ev.home, ev.away, margin, total, sd[0], sd[1],
                               0.0 if ev.sport == "american_football" else 5 / 48, model_label=label, confidence="ok")
 
     def race_engine(self, ev: Event) -> PoissonRaceEngine:
-        lam0, mu0 = LEAGUE_PRIOR.get(ev.sport, (3.5, 3.2))
+        lam0, mu0 = LEAGUE_PRIOR.get(ev.sport, (4.5, 4.2) if ev.sport == "baseball" else (3.1, 2.8))
         alpha = 0.05 if ev.sport == "hockey" else 0.12
+
+        total_line_raw = ev.meta.get("total_line") if ev.meta else None
+        try:
+            total = float(str(total_line_raw).replace("o", "").replace("u", "").strip()) if total_line_raw else (lam0 + mu0)
+        except (ValueError, TypeError):
+            total = lam0 + mu0
+
+        p_home_ml, p_away_ml, _ = _parse_espn_moneyline(ev.meta)
+        if p_home_ml is not None:
+            p_clamped = max(0.05, min(0.95, p_home_ml))
+            lam = max(0.5, total * p_clamped)
+            mu = max(0.5, total * (1.0 - p_clamped))
+            label = f"Líneas oficiales ESPN/DraftKings ({p_clamped*100:.1f}% vs {p_away_ml*100:.1f}%)"
+            return PoissonRaceEngine(ev.sport, ev.home, ev.away, lam, mu, alpha, 0.53, model_label=label, confidence="ok")
+
         h_score, h_desc = _hybrid_team_score(ev.meta, "home")
         a_score, a_desc = _hybrid_team_score(ev.meta, "away")
         
+        h_score += _team_name_offset(ev.home)
+        a_score += _team_name_offset(ev.away)
+        h_score = max(0.15, min(0.85, h_score))
+        a_score = max(0.15, min(0.85, a_score))
+
         lam = max(0.5, lam0 * (0.60 + 0.70 * h_score))
         mu = max(0.5, mu0 * (0.60 + 0.70 * a_score))
         label = f"Cálculo Híbrido ({h_desc} | {a_desc})"
         return PoissonRaceEngine(ev.sport, ev.home, ev.away, lam, mu, alpha, 0.53, model_label=label, confidence="ok")
+
+    def tennis_engine(self, ev: Event) -> TennisEngine:
+        p_home_ml, _, _ = _parse_espn_moneyline(ev.meta)
+        if p_home_ml is not None:
+            p_win = max(0.05, min(0.95, p_home_ml))
+            label = f"Líneas oficiales ESPN ({p_win*100:.1f}%)"
+        else:
+            h_score, _ = _hybrid_team_score(ev.meta, "home")
+            a_score, _ = _hybrid_team_score(ev.meta, "away")
+            elo_diff = 400.0 * (math.log10(max(h_score, 1e-3) / max(1.0 - h_score, 1e-3)) -
+                                math.log10(max(a_score, 1e-3) / max(1.0 - a_score, 1e-3)))
+            elo_diff += (_team_name_offset(ev.home) - _team_name_offset(ev.away)) * 1000.0
+            p_win = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
+            p_win = max(0.15, min(0.85, p_win))
+            label = "Modelo Markov calibrado" if ev.source != "demo" else "Demo prior"
+        return TennisEngine(ev.home, ev.away, p_win, ev.meta.get("best_of", 3) if ev.meta else 3,
+                            model_label=label, confidence="ok" if ev.source != "demo" else "demo")
+
+    def volleyball_engine(self, ev: Event) -> VolleyballEngine:
+        p_home_ml, _, _ = _parse_espn_moneyline(ev.meta)
+        if p_home_ml is not None:
+            p_win = max(0.05, min(0.95, p_home_ml))
+        else:
+            h_score, _ = _hybrid_team_score(ev.meta, "home")
+            a_score, _ = _hybrid_team_score(ev.meta, "away")
+            elo_diff = 400.0 * (math.log10(max(h_score, 1e-3) / max(1.0 - h_score, 1e-3)) -
+                                math.log10(max(a_score, 1e-3) / max(1.0 - a_score, 1e-3)))
+            elo_diff += (_team_name_offset(ev.home) - _team_name_offset(ev.away)) * 1000.0
+            p_win = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
+            p_win = max(0.15, min(0.85, p_win))
+        return VolleyballEngine(ev.home, ev.away, p_win, ev.meta.get("best_of", 5) if ev.meta else 5)
+
+    def mma_engine(self, ev: Event) -> MMAEngine:
+        p_home_ml, _, _ = _parse_espn_moneyline(ev.meta)
+        if p_home_ml is not None:
+            p_win = max(0.05, min(0.95, p_home_ml))
+        else:
+            h_score, _ = _hybrid_team_score(ev.meta, "home")
+            a_score, _ = _hybrid_team_score(ev.meta, "away")
+            elo_diff = 400.0 * (math.log10(max(h_score, 1e-3) / max(1.0 - h_score, 1e-3)) -
+                                math.log10(max(a_score, 1e-3) / max(1.0 - a_score, 1e-3)))
+            elo_diff += (_team_name_offset(ev.home) - _team_name_offset(ev.away)) * 1000.0
+            p_win = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
+            p_win = max(0.15, min(0.85, p_win))
+        return MMAEngine(ev.home, ev.away, p_win, ev.meta.get("rounds", 3) if ev.meta else 3)

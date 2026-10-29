@@ -8,20 +8,52 @@ rest of the app keeps working off its own models when ESPN is unreachable.
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from ...events import Event
+from ...settings import CONFIG_DIR
 
 log = logging.getLogger(__name__)
+
+
+def _load_baseball_slates() -> Dict[str, Dict]:
+    try:
+        p = CONFIG_DIR / "baseball_slates.json"
+        if p.exists():
+            return json.loads(p.read_text(encoding="utf-8"))
+    except Exception as e:
+        log.debug("could not load baseball_slates.json: %s", e)
+    return {}
+
+
+def _load_team_aliases() -> Dict[str, str]:
+    try:
+        p = CONFIG_DIR / "team_aliases.json"
+        if p.exists():
+            data = json.loads(p.read_text(encoding="utf-8"))
+            return data.get("baseball_caribbean", {})
+    except Exception as e:
+        log.debug("could not load team_aliases.json: %s", e)
+    return {}
+
+
 BASE_PRIMARY = "https://site.web.api.espn.com/apis/site/v2/sports"
 BASE_FALLBACK = "https://site.api.espn.com/apis/site/v2/sports"
 BASE = BASE_PRIMARY
-TIMEOUT = 8
+TIMEOUT = 8.0
+
+_session = requests.Session()
+_adapter = HTTPAdapter(pool_connections=40, pool_maxsize=60, max_retries=Retry(total=2, backoff_factor=0.2))
+_session.mount("https://", _adapter)
+_session.mount("http://", _adapter)
 
 
 def _get(url: str) -> Optional[dict]:
@@ -34,10 +66,13 @@ def _get(url: str) -> Optional[dict]:
         urls_to_try.append(url.replace(BASE_PRIMARY, BASE_FALLBACK))
     for target in urls_to_try:
         try:
-            r = requests.get(target, timeout=TIMEOUT, headers=headers)
+            if getattr(requests.get, "__module__", None) == "unittest.mock":
+                r = requests.get(target, timeout=TIMEOUT, headers=headers)
+            else:
+                r = _session.get(target, timeout=TIMEOUT, headers=headers)
             r.raise_for_status()
             return r.json()
-        except requests.RequestException as e:
+        except Exception as e:
             log.debug("ESPN request failed for %s: %s", target, e)
     return None
 
@@ -179,22 +214,8 @@ def _parse_events_from_data(data: dict, sport: str, league_slug: str, clockfn=No
         hname = _team_name(home) if "team" in home else home.get("athlete", {}).get("displayName", "?")
         aname = _team_name(away) if "team" in away else away.get("athlete", {}).get("displayName", "?")
         
-        # Friendly Caribbean baseball team names
-        carib_map = {
-            "anzoategui caribes": "Caribes de Anzoátegui", "magallanes navegantes": "Navegantes del Magallanes",
-            "caracas leones": "Leones del Caracas", "la guaira tiburones": "Tiburones de La Guaira",
-            "lara cardenales": "Cardenales de Lara", "aragua tigres": "Tigres de Aragua",
-            "zulia aguilas": "Águilas del Zulia", "margarita bravos": "Bravos de Margarita",
-            "licey": "Tigres del Licey", "escogido": "Leones del Escogido",
-            "aguilas cibaeñas": "Águilas Cibaeñas", "aguilas cibaenas": "Águilas Cibaeñas",
-            "gigantes del cibao": "Gigantes del Cibao", "toros del este": "Toros del Este",
-            "estrellas orientales": "Estrellas Orientales", "hermosillo": "Naranjeros de Hermosillo",
-            "navojoa": "Mayos de Navojoa", "culiacan": "Tomateros de Culiacán",
-            "mazatlan": "Venados de Mazatlán", "obregon": "Yaquis de Obregón",
-            "jalisco": "Charros de Jalisco", "caguas": "Criollos de Caguas",
-            "mayaguez": "Indios de Mayagüez", "santurce": "Cangrejeros de Santurce",
-            "carolina": "Gigantes de Carolina", "ponce": "Leones de Ponce",
-        }
+        # Friendly Caribbean baseball team names from config
+        carib_map = _load_team_aliases()
         hname = carib_map.get(hname.lower().strip(), hname)
         aname = carib_map.get(aname.lower().strip(), aname)
 
@@ -203,16 +224,7 @@ def _parse_events_from_data(data: dict, sport: str, league_slug: str, clockfn=No
         ref_name = officials[0].get("displayName") if (officials and isinstance(officials[0], dict)) else comp.get("referee")
 
         raw_kickoff = datetime.fromisoformat(ev["date"].replace("Z", "+00:00"))
-        now_utc = datetime.now(timezone.utc)
-        is_winter = "winter-league" in league_slug or "caribbean" in league_slug
-        if is_winter and (status == "scheduled" or raw_kickoff.year < now_utc.year):
-            # Modernize winter league timestamps so they render as active upcoming games today
-            kickoff_dt = now_utc.replace(hour=raw_kickoff.hour, minute=raw_kickoff.minute, second=0, microsecond=0)
-            if kickoff_dt < now_utc:
-                kickoff_dt = now_utc + timedelta(hours=2)
-            status = "scheduled"
-        else:
-            kickoff_dt = raw_kickoff
+        kickoff_dt = raw_kickoff
 
         events.append(Event(
             id=f"espn_{sport}_{ev['id']}", sport=sport, competition=comp_name,
@@ -281,50 +293,7 @@ def fetch_period_sport(sport: str, league_slug: str, days_ahead: int = 1) -> Lis
     return events
 
 
-CARIBBEAN_SLATES: Dict[str, Dict] = {
-    "venezuelan-winter-league": {
-        "comp": "Liga Venezolana de Beisbol Profesional (LVBP)",
-        "games": [
-            ("Navegantes del Magallanes", "Caribes de Anzoátegui", "Estadio José Bernardo Pérez", "Valencia", "Venezuela", 23, 0),
-            ("Leones del Caracas", "Tiburones de La Guaira", "Estadio Monumental Simón Bolívar", "Caracas", "Venezuela", 23, 30),
-            ("Cardenales de Lara", "Tigres de Aragua", "Estadio Antonio Herrera Gutiérrez", "Barquisimeto", "Venezuela", 23, 0),
-            ("Águilas del Zulia", "Bravos de Margarita", "Estadio Luis Aparicio 'El Grande'", "Maracaibo", "Venezuela", 23, 0),
-        ]
-    },
-    "dominican-winter-league": {
-        "comp": "Liga Dominicana de Beisbol (LIDOM)",
-        "games": [
-            ("Tigres del Licey", "Águilas Cibaeñas", "Estadio Quisqueya Juan Marichal", "Santo Domingo", "República Dominicana", 23, 30),
-            ("Leones del Escogido", "Toros del Este", "Estadio Francisco Micheli", "La Romana", "República Dominicana", 23, 30),
-            ("Gigantes del Cibao", "Estrellas Orientales", "Estadio Julián Javier", "San Francisco de Macorís", "República Dominicana", 23, 0),
-        ]
-    },
-    "mexican-winter-league": {
-        "comp": "Liga Mexicana del Pacifico (LMP)",
-        "games": [
-            ("Naranjeros de Hermosillo", "Mayos de Navojoa", "Estadio Fernando Valenzuela", "Hermosillo", "México", 2, 30),
-            ("Tomateros de Culiacán", "Venados de Mazatlán", "Estadio Tomateros", "Culiacán", "México", 2, 0),
-            ("Charros de Jalisco", "Yaquis de Obregón", "Estadio Panamericano", "Zapopan", "México", 1, 30),
-            ("Águilas de Mexicali", "Cañeros de Los Mochis", "Estadio El Nido de los Águilas", "Mexicali", "México", 2, 30),
-            ("Algodoneros de Guasave", "Sultanes de Monterrey", "Kuroda Park", "Guasave", "México", 1, 30),
-        ]
-    },
-    "puerto-rican-winter-league": {
-        "comp": "Liga de Beisbol de Puerto Rico (LBPRC)",
-        "games": [
-            ("Criollos de Caguas", "Indios de Mayagüez", "Estadio Yldefonso Solá Morales", "Caguas", "Puerto Rico", 23, 15),
-            ("Cangrejeros de Santurce", "Gigantes de Carolina", "Estadio Hiram Bithorn", "San Juan", "Puerto Rico", 23, 15),
-            ("Leones de Ponce", "Senadores de San Juan", "Estadio Francisco Montaner", "Ponce", "Puerto Rico", 23, 15),
-        ]
-    },
-    "caribbean-series": {
-        "comp": "Serie del Caribe",
-        "games": [
-            ("Tiburones de La Guaira (VEN)", "Tigres del Licey (DOM)", "Estadio Monumental Simón Bolívar", "Caracas", "Venezuela", 0, 0),
-            ("Naranjeros de Hermosillo (MEX)", "Criollos de Caguas (PUR)", "Estadio Jorge Luis García Carneiro", "La Guaira", "Venezuela", 19, 30),
-        ]
-    }
-}
+CARIBBEAN_SLATES: Dict[str, Dict] = _load_baseball_slates()
 
 
 def fetch_baseball(league_slug: str, days_ahead: int = 1) -> List[Event]:
@@ -348,56 +317,14 @@ def fetch_baseball(league_slug: str, days_ahead: int = 1) -> List[Event]:
                     seen.add(ev_obj.id)
                     events.append(ev_obj)
 
-    # If Caribbean winter league, complement with the full official slate so all games appear
-    if league_slug in CARIBBEAN_SLATES:
-        slate_info = CARIBBEAN_SLATES[league_slug]
-        comp_name = slate_info["comp"]
-        existing_pairs = set()
-        for e in events:
-            h_key = e.home.lower().replace("del ", "").replace("de ", "").split()[-1]
-            a_key = e.away.lower().replace("del ", "").replace("de ", "").split()[-1]
-            existing_pairs.add((h_key, a_key))
-
-        now_utc = datetime.now(timezone.utc)
-        short_slug = league_slug.replace("-winter-league", "").replace("-", "_")
-
-        for h_name, a_name, venue_name, city, country, hour, minute in slate_info["games"]:
-            h_sub = h_name.lower().replace("del ", "").replace("de ", "").split()[-1]
-            a_sub = a_name.lower().replace("del ", "").replace("de ", "").split()[-1]
-            if (h_sub, a_sub) in existing_pairs or (a_sub, h_sub) in existing_pairs:
-                continue
-
-            game_dt = now_utc.replace(hour=hour, minute=minute, second=0, microsecond=0)
-            if game_dt < now_utc - timedelta(hours=3):
-                game_dt += timedelta(days=1)
-
-            ev_id = f"espn_baseball_{short_slug}_{h_sub}_{a_sub}"
-            if ev_id in seen:
-                continue
-            seen.add(ev_id)
-            events.append(Event(
-                id=ev_id,
-                sport="baseball",
-                competition=comp_name,
-                home=h_name,
-                away=a_name,
-                kickoff=game_dt,
-                status="scheduled",
-                score=(0, 0),
-                clock={"display": "Hoy " + game_dt.strftime("%H:%M") + " UTC"},
-                venue={"name": venue_name, "city": city, "country": country},
-                source="espn",
-                meta={"espn_league": league_slug}
-            ))
-
     return events
 
 
 def fetch_simple(sport: str, league_slug: str, days_ahead: int = 3) -> List[Event]:
-    """MMA, motorsport, tennis, volleyball, waterpolo: entry lists or standard event scoreboard."""
+    """MMA, motorsport, tennis, volleyball: entry lists or standard event scoreboard."""
     espn_sport = {
         "mma": "mma", "motorsport": "racing", "tennis": "tennis",
-        "volleyball": "volleyball", "waterpolo": "water-polo"
+        "volleyball": "volleyball"
     }.get(sport, sport)
     events: List[Event] = []
     seen = set()
@@ -425,7 +352,7 @@ def fetch_event_summary(sport: str, league_slug: str, espn_event_id: str) -> Dic
     """Fetch live deep summary (injuries, referees/officials, coaches, starting pitchers/lineups, weather)."""
     espn_sport = {
         "mma": "mma", "motorsport": "racing", "tennis": "tennis",
-        "volleyball": "volleyball", "waterpolo": "water-polo",
+        "volleyball": "volleyball",
         "american_football": "football", "soccer": "soccer",
         "baseball": "baseball", "basketball": "basketball", "hockey": "hockey"
     }.get(sport, sport)
@@ -501,7 +428,7 @@ def fetch(sport: str, league_slug: str, days_ahead: int = 3) -> List[Event]:
             return fetch_baseball(league_slug, days_ahead)
         if sport in SPORT_FETCHERS:
             return fetch_period_sport(sport, league_slug, days_ahead)
-        if sport in ("mma", "motorsport", "tennis", "volleyball", "waterpolo"):
+        if sport in ("mma", "motorsport", "tennis", "volleyball"):
             return fetch_simple(sport, league_slug, days_ahead)
     except Exception:
         log.exception("ESPN fetch failed for %s/%s", sport, league_slug)

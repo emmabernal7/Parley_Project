@@ -1,7 +1,7 @@
 """SofaScore public API provider for real-time live events, scores, injuries, and lineups.
 
 Covers Soccer, Basketball, Tennis, Baseball, Hockey, American Football, Volleyball,
-Waterpolo, MMA, and Motorsport across clubs, international cups, and national tournaments.
+MMA, and Motorsport across clubs, international cups, and national tournaments.
 """
 from __future__ import annotations
 
@@ -9,14 +9,20 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-import requests
+import httpx
 
 from ...events import Event
 
 log = logging.getLogger(__name__)
 
 BASE_URL = "https://api.sofascore.com/api/v1"
-TIMEOUT = 6
+TIMEOUT = 6.0
+
+_client = httpx.Client(
+    timeout=TIMEOUT,
+    limits=httpx.Limits(max_keepalive_connections=20, max_connections=30),
+    follow_redirects=True,
+)
 
 SPORT_TO_SOFA = {
     "soccer": "football",
@@ -26,7 +32,6 @@ SPORT_TO_SOFA = {
     "hockey": "ice-hockey",
     "american_football": "american-football",
     "volleyball": "volleyball",
-    "waterpolo": "waterpolo",
     "motorsport": "motorsport",
     "mma": "mma",
 }
@@ -44,7 +49,7 @@ def _get(path: str) -> Optional[dict]:
         "Referer": "https://www.sofascore.com/",
     }
     try:
-        r = requests.get(url, timeout=TIMEOUT, headers=headers)
+        r = _client.get(url, headers=headers)
         if r.status_code == 200:
             return r.json()
         log.debug("SofaScore HTTP %s for %s", r.status_code, path)

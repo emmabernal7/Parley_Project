@@ -190,9 +190,6 @@ FOOTBALL_CARD = [("Kansas City Chiefs", "San Francisco 49ers", -2.5, 47.5, "NFL 
                  ("Baltimore Ravens", "Buffalo Bills", -1.5, 48.0, "NFL (demo)")]
 HOCKEY_CARD = [("Edmonton Oilers", "Florida Panthers", -1.5, 6.5, "NHL Stanley Cup (demo)"),
                ("New York Rangers", "Toronto Maple Leafs", 0.5, 6.0, "NHL (demo)")]
-WATERPOLO_CARD = [("Pro Recco", "FTC Telekom", 11.5, 9.5, "LEN Champions League (demo)"),
-                  ("Olympiacos", "CN Barceloneta", 10.5, 10.0, "LEN Champions League (demo)"),
-                  ("Serbia", "Hungary", 11.0, 10.5, "World Aquatics Championship (demo)")]
 
 
 def mma_demo_events(now: Optional[datetime] = None) -> List[Event]:
@@ -294,24 +291,6 @@ def hockey_demo_events(now: Optional[datetime] = None) -> List[Event]:
     return out
 
 
-def waterpolo_demo_events(now: Optional[datetime] = None) -> List[Event]:
-    now = now or datetime.now(timezone.utc)
-    n, frac = _slot(now, CYCLE_MINUTES)
-    out = []
-    for i, (home, away, lam, mu, comp) in enumerate(WATERPOLO_CARD):
-        status = "finished" if frac >= 1.0 else "live"
-        h = int(round(lam * min(1.0, frac)))
-        a = int(round(mu * min(1.0, frac)))
-        q = min(4, int(frac * 4) + 1)
-        ev_id = f"demo_waterpolo_{home}_{away}".replace(" ", "_")
-        out.append(Event(id=ev_id, sport="waterpolo",
-                         competition=comp, home=home, away=away, kickoff=now, status=status,
-                         score=(h, a),
-                         clock={} if status != "live" else {"display": f"Q{q} {max(1, 8 - int((frac * 32) % 8))}'", "elapsed": min(1.0, frac)},
-                         source="demo", meta={"lam": lam, "mu": mu, "demo": True}))
-    return out
-
-
 def all_demo_events(now: Optional[datetime] = None) -> List[Event]:
     evs: List[Event] = []
     evs.extend(soccer_demo_events(now))
@@ -323,5 +302,4 @@ def all_demo_events(now: Optional[datetime] = None) -> List[Event]:
     evs.extend(volleyball_demo_events(now))
     evs.extend(motorsport_demo_events(now))
     evs.extend(mma_demo_events(now))
-    evs.extend(waterpolo_demo_events(now))
     return evs

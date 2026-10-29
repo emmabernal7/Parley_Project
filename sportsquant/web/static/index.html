@@ -21,7 +21,7 @@
     <div id="searchbox"><input id="search-input" placeholder="Search teams or competitions..." /></div>
     <div class="topbar-right">
       <div id="sync-badge" class="sync-badge" title="Sincronización en directo con APIs oficiales"><span class="sync-dot"></span><span id="sync-text">Sincronizado</span></div>
-      <button class="btn-refresh" id="refresh-btn" title="Recargar partidos en vivo desde las APIs (ESPN / TheSportsDB)"><span class="refresh-ic">🔄</span><span id="txt-reload">Recargar API</span></button>
+      <button class="btn-refresh" id="refresh-btn" title="Recargar partidos en vivo desde las APIs (ESPN / Sofascore)"><span class="refresh-ic">🔄</span><span id="txt-reload">Recargar API</span></button>
       <button class="theme-toggle" id="theme-toggle" title="Alternar tema claro / oscuro" aria-label="Cambiar tema">☀️</button>
       <div class="lang-toggle">
         <button data-lang="es" class="active">ES</button>
@@ -94,6 +94,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/static/js/app.js"></script>
+<script type="module" src="/static/js/app.js"></script>
 </body>
 </html>
