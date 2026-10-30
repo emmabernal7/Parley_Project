@@ -146,18 +146,36 @@ input, select { font-family: inherit; }
   border-bottom: 1px solid var(--border);
   min-width: 0;
 }
-.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; letter-spacing: 0.2px; white-space: nowrap; }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  line-height: 1;
+}
 .brand .brand-ico,
-.brand .logo {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
+.brand .logo,
+.brand img {
+  width: 24px;
+  height: 24px;
+  max-width: 24px;
+  max-height: 24px;
+  border-radius: 5px;
   object-fit: cover;
-  box-shadow: 0 0 8px rgba(155, 140, 255, 0.4);
+  box-shadow: 0 0 6px rgba(155, 140, 255, 0.4);
   border: 1px solid rgba(155, 140, 255, 0.45);
   display: inline-block;
   vertical-align: middle;
   flex-shrink: 0;
+  margin: 0;
+}
+.brand .brand-text {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
 .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 10px var(--teal); }
 .brand .tag { color: var(--text-faint); font-weight: 500; font-size: 11px; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; }

@@ -7,7 +7,7 @@
 <link rel="icon" type="image/x-icon" href="/favicon.ico" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/css/app.css" />
+<link rel="stylesheet" href="/static/css/app.css?v=2.2" />
 </head>
 <body>
 <div id="top-progress-bar"></div>
@@ -17,7 +17,11 @@
 <div id="shell">
 
   <div id="topbar">
-    <div class="brand"><img class="brand-ico" src="/favicon.ico" alt="SportsQuant Icon" /> SportsQuant <span class="tag" id="tag-paper">paper trading</span></div>
+    <div class="brand">
+      <img class="brand-ico" src="/favicon.ico" alt="SportsQuant Icon" width="24" height="24" style="width:24px;height:24px;max-width:24px;max-height:24px;border-radius:5px;object-fit:cover;flex-shrink:0;display:inline-block;vertical-align:middle;margin:0;" />
+      <span class="brand-text">SportsQuant</span>
+      <span class="tag" id="tag-paper">paper trading</span>
+    </div>
     <div id="searchbox"><input id="search-input" placeholder="Search teams or competitions..." /></div>
     <div class="topbar-right">
       <div id="sync-badge" class="sync-badge" title="Sincronización en directo con APIs oficiales"><span class="sync-dot"></span><span id="sync-text">Sincronizado</span></div>
