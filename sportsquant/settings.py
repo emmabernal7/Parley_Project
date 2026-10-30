@@ -83,6 +83,7 @@ def get_settings(reload: bool = False) -> Settings:
                 setattr(s, k, v)
     env_map = {"THE_ODDS_API_KEY": "odds_api_key", "ODDS_API_KEY": "odds_api_key", "GEMINI_API_KEY": "gemini_api_key",
                "ANTHROPIC_API_KEY": "anthropic_api_key", "X_BEARER_TOKEN": "x_bearer_token", "SQ_DB": "db_path", "SQ_PORT": "port",
+               "PORT": "port", "SQ_HOST": "host", "HOST": "host",
                "SQ_SIM_SPEED": "sim_speed", "SQ_LLM": "llm_provider", "GEMINI_MODEL": "gemini_model",
                "ANTHROPIC_MODEL": "anthropic_model"}
     for env, attr in env_map.items():
@@ -90,6 +91,10 @@ def get_settings(reload: bool = False) -> Settings:
         if val:
             cur = getattr(s, attr)
             setattr(s, attr, type(cur)(val) if not isinstance(cur, str) else val)
+    if os.environ.get("RENDER") or os.environ.get("PORT"):
+        if "HOST" not in os.environ and "SQ_HOST" not in os.environ:
+            s.host = "0.0.0.0"
+        s.open_browser = False
     if os.environ.get("SQ_PROVIDERS"):
         s.providers = [p.strip() for p in os.environ["SQ_PROVIDERS"].split(",") if p.strip()]
     _SETTINGS = s
