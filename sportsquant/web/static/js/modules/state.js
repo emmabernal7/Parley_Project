@@ -2,7 +2,7 @@
 
 export const I18N = {
   es: {
-    paper_trading: "Simulación Paper",
+    paper_trading: "Parley Project by JS-JT-EB 2026",
     search_placeholder: "Buscar equipos o competencias...",
     reload_api: "Recargar API",
     paper_bankroll: "simulado",
@@ -68,7 +68,7 @@ export const I18N = {
     }
   },
   en: {
-    paper_trading: "paper trading",
+    paper_trading: "Parley Project by JS-JT-EB 2026",
     search_placeholder: "Search teams or competitions...",
     reload_api: "Reload API",
     paper_bankroll: "paper",

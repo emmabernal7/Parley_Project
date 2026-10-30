@@ -1,7 +1,7 @@
 // SportsQuant - Bet Slip & Paper Bankroll Management (ES Modules)
 
 import { state, $, el, toast } from "./state.js";
-import { fmtOdds, translateGroupName, translateLabel } from "./render.js";
+import { fmtOdds, fmtSel, translateGroupName, translateLabel } from "./render.js";
 import {
   getSlip,
   addSlipLeg,
@@ -56,7 +56,7 @@ export async function refreshSlip(onDetailUpdate) {
             <span class="sel">${translateLabel(l.selection)}</span>
             <button class="rm">✕</button>
           </div>
-          <div class="ev">${l.event} - ${translateGroupName(l.market)} - ${(l.prob * 100).toFixed(1)}%</div>
+          <div class="ev">${l.event} - ${translateGroupName(l.market)} - ${fmtSel({prob: l.prob, odds: l.odds != null ? l.odds : (1 / l.prob)})}</div>
         `;
         row.querySelector(".rm").onclick = async () => {
           await removeSlipLeg(state.sessionId, leg.event_id, leg.key);

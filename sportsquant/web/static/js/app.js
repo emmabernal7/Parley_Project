@@ -233,6 +233,7 @@ function wireStatic() {
       $$(".odds-toggle button").forEach((x) => x.classList.toggle("active", x === b));
       renderMatchList((id) => selectEvent(id));
       rerenderCurrentDetail();
+      refreshSlip(rerenderCurrentDetail);
     };
   });
 

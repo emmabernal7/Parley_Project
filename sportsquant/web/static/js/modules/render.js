@@ -4,8 +4,22 @@ import { state, I18N, $, $$, el, getSports, getTabOrder, toast } from "./state.j
 import { setUserOdds } from "./api.js";
 
 // ---------------------------------------------------------------- Formatting
+export function decimalToAmerican(d) {
+  if (d == null || !isFinite(d) || d <= 1.0) return "-";
+  if (d >= 2.0) {
+    const us = Math.round((d - 1.0) * 100);
+    return "+" + us;
+  } else {
+    const us = Math.round(-100.0 / (d - 1.0));
+    return us.toString(); // already includes negative sign e.g. -150
+  }
+}
+
 export function fmtOdds(o) {
   if (o == null || !isFinite(o)) return "-";
+  if (state.oddsFmt === "us") {
+    return decimalToAmerican(o);
+  }
   if (o < 10) return o.toFixed(2);
   if (o < 100) return o.toFixed(1);
   return Math.round(o).toString();
@@ -18,6 +32,15 @@ export function fmtSel(sel) {
       return (sel.prob * 100).toFixed(1) + "%";
     } else if (sel.odds != null && isFinite(sel.odds) && sel.odds > 0) {
       return ((1 / sel.odds) * 100).toFixed(1) + "%";
+    }
+    return "-";
+  }
+  if (state.oddsFmt === "us") {
+    if (sel.odds != null && isFinite(sel.odds) && sel.odds > 1.0) {
+      return decimalToAmerican(sel.odds);
+    }
+    if (sel.prob != null && isFinite(sel.prob) && sel.prob > 0 && sel.prob < 1.0) {
+      return decimalToAmerican(1.0 / sel.prob);
     }
     return "-";
   }
@@ -618,7 +641,13 @@ export function renderInfoCol(d) {
     ${d.info.expected_final ? `<div class="info-row"><span class="k">${t.exp_score}</span><span class="v num">${d.info.expected_final[0].toFixed(2)} - ${d.info.expected_final[1].toFixed(2)}</span></div>` : ""}
     ${d.info.expected_margin != null ? `<div class="info-row"><span class="k">${t.exp_margin}</span><span class="v num">${d.info.expected_margin.toFixed(1)}</span></div>` : ""}
     ${d.info.expected_total != null ? `<div class="info-row"><span class="k">${t.exp_total}</span><span class="v num">${d.info.expected_total.toFixed(1)}</span></div>` : ""}
-    <div class="info-row"><span class="k">${t.odds_fmt_label}</span><span class="v">${state.oddsFmt === "pct" ? "% Probabilidad" : "Cuota decimal"}</span></div>`;
+    <div class="info-row"><span class="k">${t.odds_fmt_label}</span><span class="v">${
+      state.oddsFmt === "pct"
+        ? (state.lang === "es" ? "% Probabilidad" : "% Probability")
+        : state.oddsFmt === "us"
+        ? (state.lang === "es" ? "Momio Americano (±100)" : "American Odds (±100)")
+        : (state.lang === "es" ? "Cuota Decimal" : "Decimal Odds")
+    }</span></div>`;
   box.appendChild(model);
 
   if (d.weather) {

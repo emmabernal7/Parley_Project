@@ -7,7 +7,7 @@
 <link rel="icon" type="image/x-icon" href="/favicon.ico" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/css/app.css?v=2.2" />
+<link rel="stylesheet" href="/static/css/app.css?v=2.3" />
 </head>
 <body>
 <div id="top-progress-bar"></div>
@@ -20,7 +20,7 @@
     <div class="brand">
       <img class="brand-ico" src="/favicon.ico" alt="SportsQuant Icon" width="24" height="24" style="width:24px;height:24px;max-width:24px;max-height:24px;border-radius:5px;object-fit:cover;flex-shrink:0;display:inline-block;vertical-align:middle;margin:0;" />
       <span class="brand-text">SportsQuant</span>
-      <span class="tag" id="tag-paper">paper trading</span>
+      <span class="tag" id="tag-paper">Parley Project by JS-JT-EB 2026</span>
     </div>
     <div id="searchbox"><input id="search-input" placeholder="Search teams or competitions..." /></div>
     <div class="topbar-right">
@@ -31,9 +31,10 @@
         <button data-lang="es" class="active">ES</button>
         <button data-lang="en">EN</button>
       </div>
-      <div class="odds-toggle">
+      <div class="odds-toggle" title="Formato de cuotas: Porcentaje, Decimal o Momio americano">
         <button data-fmt="pct" class="active">%</button>
         <button data-fmt="dec">1.28</button>
+        <button data-fmt="us">±100</button>
       </div>
       <div class="wallet"><span class="coin"></span><span class="amt num" id="bankroll-amt">1000.00</span><span class="lbl" id="lbl-bankroll">paper</span></div>
       <button class="icon-btn" id="bets-btn" title="Mis apuestas simuladas">☰</button>
