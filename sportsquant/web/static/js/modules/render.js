@@ -780,29 +780,54 @@ export function clearDetail() {
   }
 }
 
-export function renderBetsModal(bets) {
+export function renderBetsModal(bets, onDeleteBet, onClearAllBets) {
   const box = $("#bets-list");
+  const countBadge = $("#bets-count-badge");
+  const clearAllBtn = $("#bets-clear-all");
+  if (countBadge) countBadge.textContent = bets ? bets.length : 0;
+  if (clearAllBtn) {
+    clearAllBtn.style.display = bets && bets.length > 0 ? "inline-flex" : "none";
+    if (onClearAllBets) {
+      clearAllBtn.onclick = onClearAllBets;
+    }
+  }
   if (!box) return;
-  if (!bets.length) {
-    box.innerHTML = `<p style='color:var(--text-faint)'>${state.lang === "es" ? "Sin apuestas simuladas aún." : "No paper bets yet."}</p>`;
+  if (!bets || !bets.length) {
+    box.innerHTML = `<p style='color:var(--text-faint);text-align:center;padding:24px 0;'>${state.lang === "es" ? "Sin apuestas simuladas aún." : "No paper bets yet."}</p>`;
     return;
   }
-  box.innerHTML = "";
+  const frag = document.createDocumentFragment();
   bets.forEach((b) => {
     const row = el("div", "slip-leg");
     const statusColor =
       b.status === "won" ? "var(--teal)" : b.status === "lost" ? "var(--coral)" : "var(--text-dim)";
+    const statusLabel =
+      b.status === "won" ? (state.lang === "es" ? "GANADA" : "WON")
+      : b.status === "lost" ? (state.lang === "es" ? "PERDIDA" : "LOST")
+      : (state.lang === "es" ? "ABIERTA" : "OPEN");
     row.innerHTML = `
       <div class="top">
-        <span class="sel">Monto ${b.stake.toFixed(2)} - <span style="color:${statusColor}">${b.status.toUpperCase()}</span></span>
-        <span class="num" style="color:${b.pnl > 0 ? "var(--teal)" : b.pnl < 0 ? "var(--coral)" : "var(--text-dim)"}">
-          ${b.pnl > 0 ? "+" : ""}${b.pnl.toFixed(2)}
-        </span>
+        <span class="sel">${state.lang === "es" ? "Monto" : "Stake"} $${b.stake.toFixed(2)} - <span style="color:${statusColor}">${statusLabel}</span></span>
+        <div style="display:flex;align-items:center;">
+          <span class="num" style="color:${b.pnl > 0 ? "var(--teal)" : b.pnl < 0 ? "var(--coral)" : "var(--text-dim)"}">
+            ${b.pnl > 0 ? "+" : ""}${b.pnl.toFixed(2)}
+          </span>
+          <button class="bet-del-btn" title="${state.lang === "es" ? "Eliminar esta apuesta" : "Delete this bet"}">🗑</button>
+        </div>
       </div>
       <div class="ev">${b.legs.map((l) => l.label || l.key).join(" · ")}</div>
     `;
-    box.appendChild(row);
+    const delBtn = row.querySelector(".bet-del-btn");
+    if (delBtn && onDeleteBet) {
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        onDeleteBet(b.id);
+      };
+    }
+    frag.appendChild(row);
   });
+  box.innerHTML = "";
+  box.appendChild(frag);
 }
 
 // ---------------------------------------------------------------- Global Translation Applier
@@ -823,20 +848,29 @@ export function applyTranslations(isPickedFn, onToggleSlip, onDetailRefresh) {
         ? "Selecciona un partido a la izquierda para ver predicciones cuantitativas y cuotas justas en tiempo real.<br><small style='color:var(--text-dim)'>Simulación deportiva analítica · Sin dinero real · Solo fines de estudio</small>"
         : "Pick a match on the left to see live quantitative predictions and fair markets.<br><small style='color:var(--text-dim)'>Paper trading simulation · Not real money · Not betting advice</small>";
   }
-  const betsModalTitle = $("#bets-modal-bg strong");
+  const betsModalTitle = $("#bets-modal-title") || $("#bets-modal-bg strong");
   if (betsModalTitle) {
     betsModalTitle.textContent = state.lang === "es" ? "Mis apuestas simuladas" : "My paper bets";
   }
 
-  const slipHead = $("#slip-panel .slip-head span");
-  if (slipHead) slipHead.textContent = t.bet_slip;
+  const slipTitle = $("#slip-title");
+  if (slipTitle) slipTitle.textContent = t.bet_slip;
   const slipClear = $("#slip-clear");
   if (slipClear) slipClear.textContent = t.clear;
-  const slipFab = $("#slip-fab span");
-  if (slipFab) slipFab.textContent = t.bet_slip;
-  const slipRows = $$("#slip-panel .slip-foot .row span:first-child");
-  if (slipRows[0]) slipRows[0].textContent = t.true_prob;
-  if (slipRows[1]) slipRows[1].textContent = t.fair_odds;
+  const slipClose = $("#slip-close");
+  if (slipClose) slipClose.title = t.close_slip;
+  const slipFabText = $("#slip-fab-text");
+  if (slipFabText) slipFabText.textContent = t.bet_slip;
+  const lblTrueProb = $("#lbl-true-prob");
+  if (lblTrueProb) lblTrueProb.textContent = t.true_prob;
+  const lblFairOdds = $("#lbl-fair-odds");
+  if (lblFairOdds) lblFairOdds.textContent = t.fair_odds;
+  const lblNetProfit = $("#lbl-net-profit");
+  if (lblNetProfit) lblNetProfit.textContent = t.net_profit;
+  const lblTotalPayout = $("#lbl-total-payout");
+  if (lblTotalPayout) lblTotalPayout.textContent = t.total_payout;
+  const betsClearAll = $("#bets-clear-all");
+  if (betsClearAll) betsClearAll.textContent = t.clear_history;
   const slipStake = $("#slip-stake");
   if (slipStake) slipStake.placeholder = t.paper_stake;
   const slipPlace = $("#slip-place");

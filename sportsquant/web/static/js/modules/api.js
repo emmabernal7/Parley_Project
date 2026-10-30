@@ -34,6 +34,15 @@ export const getSettings = () =>
 export const getBets = () =>
   api("/api/bets");
 
+export const getBankrollSummary = () =>
+  api("/api/bankroll");
+
+export const deleteBet = (id) =>
+  api("/api/bets/" + encodeURIComponent(id), { method: "DELETE" });
+
+export const clearAllBets = () =>
+  api("/api/bets", { method: "DELETE" });
+
 export const getSlip = (sessionId) =>
   api("/api/slip?session_id=" + encodeURIComponent(sessionId));
 

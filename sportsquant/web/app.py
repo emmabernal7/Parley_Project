@@ -207,9 +207,24 @@ def place_bet(body: PlaceBet):
     return {"id": slip_id, "priced": priced}
 
 
+@app.get("/api/bankroll")
+def get_bankroll():
+    s = get_settings()
+    return state["store"].get_bankroll_summary(base_bankroll=s.bankroll)
+
+
 @app.get("/api/bets")
-def list_bets(status: Optional[str] = None):
-    return state["store"].list_slips(status=status)
+def list_bets(status: Optional[str] = None, limit: Optional[int] = 100):
+    slips = state["store"].list_slips(status=status)
+    if limit and limit > 0:
+        return slips[:limit]
+    return slips
+
+
+@app.delete("/api/bets")
+def clear_all_bets():
+    state["store"].clear_slips()
+    return {"ok": True}
 
 
 @app.delete("/api/bets/{bet_id}")

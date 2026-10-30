@@ -97,6 +97,16 @@ def test_slip_and_paper_bet_flow(client):
     assert client.get("/api/slip", params={"session_id": "t2"}).json()["legs"] == []
     assert client.delete(f"/api/bets/{bet_id}").status_code == 200
 
+    # Bankroll endpoint summary test
+    bankroll = client.get("/api/bankroll").json()
+    assert "current_bankroll" in bankroll
+    assert "settled_pnl" in bankroll
+    assert "open_stake" in bankroll
+
+    # Clear all bets test
+    assert client.delete("/api/bets").status_code == 200
+    assert len(client.get("/api/bets").json()) == 0
+
 
 def test_data_status_and_social_status(client):
     assert client.get("/api/data-status").status_code == 200

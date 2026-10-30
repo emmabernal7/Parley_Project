@@ -421,7 +421,45 @@ input, select { font-family: inherit; }
 }
 #slip-panel.open { display: flex; }
 .slip-head { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 13px; }
-.slip-head button { background: none; border: none; color: var(--text-faint); font-size: 12px; }
+.slip-head button { background: none; border: none; color: var(--text-faint); font-size: 12px; cursor: pointer; }
+.slip-head button:hover { color: var(--text); }
+.slip-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+.slip-close-btn:hover {
+  color: var(--coral);
+  background: rgba(255, 92, 114, 0.15);
+}
+.btn-clear-history:hover {
+  background: rgba(255, 92, 114, 0.22) !important;
+  border-color: var(--coral) !important;
+}
+.bet-del-btn {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  transition: all 0.15s ease;
+}
+.bet-del-btn:hover {
+  color: var(--coral);
+  background: rgba(255, 92, 114, 0.15);
+}
 #slip-legs { overflow-y: auto; padding: 8px 10px; flex: 1; }
 .slip-leg { background: var(--elevated); border-radius: var(--radius-sm); padding: 8px 10px; margin-bottom: 6px; font-size: 12px; }
 .slip-leg .top { display: flex; justify-content: space-between; }

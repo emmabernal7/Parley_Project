@@ -32,6 +32,9 @@ import {
   clearSlipAction,
   placePaperBetAction,
   refreshBankrollDisplay,
+  updateSlipCalculations,
+  deleteBetAction,
+  clearAllBetsAction,
 } from "./modules/slip.js?v=2.5";
 import { wireChat, syncPanelPositions } from "./modules/chat.js?v=2.5";
 
@@ -245,9 +248,22 @@ function wireStatic() {
       syncPanelPositions();
     };
   }
+  const slipClose = $("#slip-close");
+  if (slipClose) {
+    slipClose.onclick = () => {
+      const slipPanel = $("#slip-panel");
+      if (slipPanel) slipPanel.classList.remove("open");
+      syncPanelPositions();
+    };
+  }
   const slipClear = $("#slip-clear");
   if (slipClear) {
     slipClear.onclick = () => clearSlipAction(rerenderCurrentDetail);
+  }
+  const slipStake = $("#slip-stake");
+  if (slipStake) {
+    slipStake.addEventListener("input", () => updateSlipCalculations());
+    slipStake.addEventListener("change", () => updateSlipCalculations());
   }
   const slipPlace = $("#slip-place");
   if (slipPlace) {
@@ -261,15 +277,28 @@ function wireStatic() {
   const betsBtn = $("#bets-btn");
   const betsModalBg = $("#bets-modal-bg");
   const betsClose = $("#bets-close");
+
+  async function loadAndRenderBets() {
+    try {
+      const bets = await getBets();
+      renderBetsModal(
+        bets,
+        async (betId) => {
+          await deleteBetAction(betId, loadAndRenderBets);
+        },
+        async () => {
+          await clearAllBetsAction(loadAndRenderBets);
+        }
+      );
+    } catch (e) {
+      toast(state.lang === "es" ? "Error al cargar historial" : "Error loading history");
+    }
+  }
+
   if (betsBtn) {
     betsBtn.onclick = async () => {
       if (betsModalBg) betsModalBg.style.display = "block";
-      try {
-        const bets = await getBets();
-        renderBetsModal(bets);
-      } catch (e) {
-        toast(state.lang === "es" ? "Error al cargar historial" : "Error loading history");
-      }
+      await loadAndRenderBets();
     };
   }
   if (betsClose) {

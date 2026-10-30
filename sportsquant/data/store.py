@@ -202,3 +202,31 @@ class Store:
     def delete_slip(self, slip_id: int) -> None:
         with self.conn() as c:
             c.execute("DELETE FROM slips WHERE id=?", (slip_id,))
+
+    def clear_slips(self) -> None:
+        with self.conn() as c:
+            c.execute("DELETE FROM slips")
+
+    def get_bankroll_summary(self, base_bankroll: float = 1000.0) -> dict:
+        with self.conn() as c:
+            row = c.execute("""
+                SELECT 
+                    COALESCE(SUM(CASE WHEN status != 'open' THEN pnl ELSE 0 END), 0.0) AS settled_pnl,
+                    COALESCE(SUM(CASE WHEN status = 'open' THEN stake ELSE 0 END), 0.0) AS open_stake,
+                    COUNT(*) AS total_bets,
+                    COALESCE(SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END), 0) AS open_bets
+                FROM slips
+            """).fetchone()
+            settled_pnl = float(row["settled_pnl"])
+            open_stake = float(row["open_stake"])
+            total_bets = int(row["total_bets"])
+            open_bets = int(row["open_bets"])
+            current_bankroll = round(base_bankroll + settled_pnl - open_stake, 2)
+            return {
+                "base_bankroll": base_bankroll,
+                "settled_pnl": round(settled_pnl, 2),
+                "open_stake": round(open_stake, 2),
+                "current_bankroll": current_bankroll,
+                "total_bets": total_bets,
+                "open_bets": open_bets,
+            }
