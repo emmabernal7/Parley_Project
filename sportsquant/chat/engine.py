@@ -14,7 +14,7 @@ from typing import Deque, Dict, List, Optional, Tuple
 
 import requests
 
-from ..odds import fmt_odds, fmt_pct
+from ..odds import fmt_odds, fmt_pct, parse_odds
 from ..settings import get_settings
 from .tools import TOOL_SPECS, ToolBox
 
@@ -69,9 +69,17 @@ class OfflineChat:
         if prop_res:
             return prop_res
 
-        # Value / +EV
-        if re.search(r"\bvalue\b|\+ev\b|best bets?\b|apuestas? de valor\b|mejores apuestas\b|valor\b", low):
-            return self._value(low)
+        # Covers Consensus / Tendencias del publico / Fade the public
+        if re.search(r"\bcovers\b|\bconsenso\b|lo que (esta\s*)?jugando la gente|tendencias? del p[uú]blico|fade the public|p[uú]blico\b", low):
+            return self._covers_consensus(low)
+
+        # Logros / Best bets / Value / Picks recomendados
+        if re.search(r"\blogros?\b|\bmejores logros\b|\bmejores apuestas\b|\bpicks?\b|\brecomendaciones?\b|\bvalue\b|\+ev\b|apuestas? de valor\b|que recomiendas", low):
+            return self._best_logros(low)
+
+        # Highest payouts / Lo que más paga / Hembras / Underdogs
+        if re.search(r"\blo que m[aá]s paga\b|\bque m[aá]s paga\b|\bcuotas? altas?\b|\bhembras?\b|\bunderdogs?\b|\bmayores ganancias\b|\bpagan? m[aá]s\b", low):
+            return self._highest_payouts(low)
 
         # Slip / Parlay / Combinada
         if re.search(r"\bslip\b|\bparlay\b|\bcombo\b|\bmulti\b|\bboleto\b|\bcombinada\b", low) or "price" in low or "analiz" in low and ("boleto" in low or "slip" in low or "parlay" in low):
@@ -245,17 +253,98 @@ class OfflineChat:
             return float(pm.group(1)) / 100.0, float(om.group(1))
         return None
 
+    def _parse_sport(self, low: str) -> Optional[str]:
+        if any(w in low for w in ("nba", "basket", "baloncesto", "basketball", "ncaab", "wnba")):
+            return "basketball"
+        if any(w in low for w in ("nhl", "hockey")):
+            return "hockey"
+        if any(w in low for w in ("nfl", "football", "americano", "ncaaf")):
+            return "american_football"
+        if any(w in low for w in ("mlb", "beisbol", "béisbol", "baseball", "lvbp", "lidom")):
+            return "baseball"
+        if any(w in low for w in ("soccer", "futbol", "fútbol")):
+            return "soccer"
+        if any(w in low for w in ("tennis", "tenis")):
+            return "tennis"
+        if any(w in low for w in ("mma", "ufc")):
+            return "mma"
+        if any(w in low for w in ("volleyball", "voleibol")):
+            return "volleyball"
+        return None
+
+    def _best_logros(self, low: str) -> str:
+        sport = self._parse_sport(low)
+        rows = self.tools.get_best_logros(sport=sport)
+        if not rows:
+            return ("No se detectaron logros con ventaja positiva (+EV) en este momento para la selección solicitada. "
+                    "Las casas de apuestas tienen las líneas ajustadas. Prueba con otra disciplina o consulta el consenso de Covers.")
+
+        lines = ["🏆 **Mejores Logros Cuantitativos (+EV) de Hoy:**\n",
+                 "Comparando probabilidades matemáticas de nuestros modelos contra cuotas reales de **DraftKings / ESPN BET**:\n"]
+        for r in rows[:6]:
+            src = f" ({r['source']})" if r.get("source") else ""
+            lines.append(
+                f"• **{r['event']}**\n"
+                f"  ➡️ Selección: **{r['selection']}** ({r['market']})\n"
+                f"  • Probabilidad del Modelo: **{fmt_pct(r['model_prob'])}** (Cuota justa: **{fmt_odds(r['fair_odds'])}**)\n"
+                f"  • Cuota de la Casa{src}: **{fmt_odds(r['bookmaker_odds'])}**\n"
+                f"  • Ventaja Matemática: **+{r['edge_pct']}% EV** | Stake Kelly sugerido: **{r['kelly_stake_pct']}%**\n"
+            )
+        lines.append(f"\n💡 *Estrategia:* Prioriza apuestas con ventaja positiva (+EV) y mantén disciplina de banca.\n\n{DISCLAIMER}")
+        return "\n".join(lines)
+
+    def _highest_payouts(self, low: str) -> str:
+        sport = self._parse_sport(low)
+        rows = self.tools.get_highest_payouts(sport=sport, min_odds=2.10)
+        if not rows:
+            return ("No hay cuotas altas (> 2.10) con riesgo justificado detectadas en este instante. "
+                    "Las cuotas altas disponibles en el mercado tienen probabilidades muy bajas según el modelo.")
+
+        lines = ["💰 **Logros de Mayor Ganancia (Cuotas Altas / Hembras con Valor):**\n",
+                 "Selecciones donde la casa paga cuota superior a **2.10** (+110) y el modelo proyecta valor favorable:\n"]
+        for r in rows[:6]:
+            lines.append(
+                f"• **{r['event']}** | **{r['selection']}** ({r['market']})\n"
+                f"  • Cuota ofrecida ({r.get('source', 'DraftKings')}): **{fmt_odds(r['bookmaker_odds'])}** (Paga ${r['bookmaker_odds']:.2f} por cada $1.00)\n"
+                f"  • Probabilidad estimada: **{fmt_pct(r['model_prob'])}** (Cuota justa: {fmt_odds(r['fair_odds'])})\n"
+                f"  • Ventaja: **+{r['edge_pct']}%** | Riesgo: **Moderado / Varianza Alta**\n"
+                f"  • Gestión de Banca: Stake sugerido **{r['kelly_stake_pct']}%**.\n"
+            )
+        lines.append(f"\n⚠️ *Nota de Riesgo:* Las cuotas altas conllevan mayor varianza; modera siempre el stake.\n\n{DISCLAIMER}")
+        return "\n".join(lines)
+
+    def _covers_consensus(self, low: str) -> str:
+        sport = self._parse_sport(low)
+        items = self.tools.get_covers_consensus(sport=sport)
+        if not items:
+            return ("No se pudieron obtener tendencias de consenso de Covers.com en este momento (o no hay partidos registrados hoy en esa categoría). "
+                    "Intenta consultando el consenso general o los mejores logros.")
+
+        lines = ["📈 **Consenso de Apostadores en Vivo (Covers.com):**\n",
+                 "Inclinación del público y porcentaje de selecciones en concursos de apuestas:\n"]
+        for it in items[:6]:
+            fade_tag = " 🔥 **[Alerta Fade the Public]**" if it.get("fade_the_public") else ""
+            lines.append(
+                f"• **[{it['league']}] {it['team1']} vs {it['team2']}**{fade_tag}\n"
+                f"  • Mayoría del Público: **{it['favored_pct']}%** en **{it['favored_team']}**\n"
+                f"  • Minoría (Underdog): **{it['underdog_pct']}%** en **{it['underdog_team']}**\n"
+                f"  • Líneas: {it['team1']} ({it['line1']}) | {it['team2']} ({it['line2']})\n"
+                f"  • Volumen de picks: {it['picks1']} vs {it['picks2']}\n"
+            )
+            if it.get("fade_the_public"):
+                lines.append(f"  💡 *Análisis Contrarian:* {it.get('fade_advice')}\n")
+
+        lines.append("\n📌 *Tip Quant:* El consenso de Covers refleja el sesgo del apostador promedio. A menudo, el valor matemático se encuentra apostando del lado contrario al favorito sobreapostado (*Fade the Public*).")
+        return "\n".join(lines)
+
     def _value(self, low: str) -> str:
-        sport = None
-        for s in ("soccer", "basketball", "hockey", "baseball", "tennis", "mma", "volleyball"):
-            if s in low:
-                sport = s
+        sport = self._parse_sport(low)
         rows = self.tools.find_value(sport=sport)
         if not rows:
             return ("No hay apuestas +EV detectadas actualmente en partidos donde hayas ingresado tu cuota. "
                     "Haz clic derecho en cualquier cuota de la app para ingresar la de tu casa de apuestas y buscaré oportunidades de valor.")
         lines = [f"• **{r['event']}**: {r['selection']} ({r['market']}) - Modelo **{fmt_pct(r['model_prob'])}** "
-                f"vs tu cuota **{fmt_odds(r['your_odds'])}** -> Ventaja: **+{r['edge_pct']}%**, Stake sugerido: **{r['kelly_stake_pct']}%**"
+                f"vs cuota **{fmt_odds(r.get('your_odds') or r.get('bookmaker_odds', 1.0))}** -> Ventaja: **+{r['edge_pct']}%**, Stake sugerido: **{r['kelly_stake_pct']}%**"
                 for r in rows[:6]]
         return "💎 **Mejores Oportunidades de Valor (+EV):**\n\n" + "\n".join(lines) + f"\n\n{DISCLAIMER}"
 
@@ -346,6 +435,31 @@ class OfflineChat:
             lines.append(f"\n🎯 **Marcador Esperado:** {ef[0]:.2f} - {ef[1]:.2f}")
         elif info.get("expected_total") is not None:
             lines.append(f"\n🎯 **Total Esperado:** {info['expected_total']:.1f}")
+
+        ev_obj = self.tools.live.get_event(e["id"])
+        if ev_obj:
+            ml = ev_obj.meta.get("moneyline")
+            src = ev_obj.meta.get("source") or "DraftKings"
+            if ml and isinstance(ml, dict) and any(ml.values()):
+                lines.append(f"\n🏛️ **Líneas Oficiales de la Casa ({src}):**")
+                if ml.get("home"):
+                    try:
+                        lines.append(f"• {e['home']}: **{ml['home']}** (Decimal: {fmt_odds(parse_odds(ml['home']))})")
+                    except Exception:
+                        lines.append(f"• {e['home']}: **{ml['home']}**")
+                if ml.get("away"):
+                    try:
+                        lines.append(f"• {e['away']}: **{ml['away']}** (Decimal: {fmt_odds(parse_odds(ml['away']))})")
+                    except Exception:
+                        lines.append(f"• {e['away']}: **{ml['away']}**")
+                if ml.get("draw"):
+                    try:
+                        lines.append(f"• Empate: **{ml['draw']}** (Decimal: {fmt_odds(parse_odds(ml['draw']))})")
+                    except Exception:
+                        lines.append(f"• Empate: **{ml['draw']}**")
+            tot = ev_obj.meta.get("total_line")
+            if tot:
+                lines.append(f"• Línea Total (Over/Under): **{tot}**")
 
         lines.append("\n💡 **Opinión Quant & Recomendación:**")
         if "1x2" in g:

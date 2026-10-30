@@ -1,7 +1,7 @@
 // SportsQuant - DOM Rendering and UI Presentation Layer (ES Modules)
 
-import { state, I18N, $, $$, el, getSports, getTabOrder, toast } from "./state.js?v=2.6";
-import { setUserOdds } from "./api.js?v=2.6";
+import { state, I18N, $, $$, el, getSports, getTabOrder, toast } from "./state.js?v=2.7";
+import { setUserOdds } from "./api.js?v=2.7";
 
 // ---------------------------------------------------------------- Formatting
 export function decimalToAmerican(d) {
@@ -889,26 +889,26 @@ export function applyTranslations(isPickedFn, onToggleSlip, onDetailRefresh) {
   if (chatInput) chatInput.placeholder = t.ask_placeholder;
   const sugBtns = $$(".chat-suggestions button");
   if (sugBtns[0]) {
-    sugBtns[0].textContent = t.prop_chip;
+    sugBtns[0].textContent = state.lang === "es" ? "🏆 Mejores logros" : "🏆 Best +EV bets";
     sugBtns[0].dataset.q =
       state.lang === "es"
-        ? "Over 3.5 carreras Tampa Bay vs Guardians"
-        : "Over 3.5 runs Tampa Bay vs Guardians";
+        ? "mejores logros de hoy"
+        : "best value bets today";
   }
   if (sugBtns[1]) {
-    sugBtns[1].textContent = t.carib_chip;
+    sugBtns[1].textContent = state.lang === "es" ? "📈 Consenso Covers" : "📈 Covers consensus";
     sugBtns[1].dataset.q =
       state.lang === "es"
-        ? "Over 4.5 carreras Magallanes vs Caribes"
-        : "Over 4.5 runs Magallanes vs Caribes";
+        ? "consenso covers"
+        : "covers consensus";
   }
   if (sugBtns[2]) {
-    sugBtns[2].textContent = t.value_bets_chip;
-    sugBtns[2].dataset.q = state.lang === "es" ? "apuestas de valor" : "value bets";
+    sugBtns[2].textContent = state.lang === "es" ? "💰 ¿Qué más paga?" : "💰 Highest payouts";
+    sugBtns[2].dataset.q = state.lang === "es" ? "que es lo que mas paga" : "highest payouts";
   }
   if (sugBtns[3]) {
-    sugBtns[3].textContent = t.price_slip_chip;
-    sugBtns[3].dataset.q = state.lang === "es" ? "analizar mi boleto" : "price my slip";
+    sugBtns[3].textContent = state.lang === "es" ? "🎲 Analizar mi boleta" : "🎲 Price my slip";
+    sugBtns[3].dataset.q = state.lang === "es" ? "analizar mi boleta" : "price my slip";
   }
 
   renderRail();

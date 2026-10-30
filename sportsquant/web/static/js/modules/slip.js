@@ -1,7 +1,7 @@
 // SportsQuant - Bet Slip & Paper Bankroll Management (ES Modules)
 
-import { state, I18N, $, el, toast } from "./state.js?v=2.6";
-import { fmtOdds, fmtSel, translateGroupName, translateLabel } from "./render.js?v=2.6";
+import { state, I18N, $, el, toast } from "./state.js?v=2.7";
+import { fmtOdds, fmtSel, translateGroupName, translateLabel } from "./render.js?v=2.7";
 import {
   getSlip,
   addSlipLeg,
@@ -13,7 +13,7 @@ import {
   getBankrollSummary,
   deleteBet,
   clearAllBets,
-} from "./api.js?v=2.6";
+} from "./api.js?v=2.7";
 
 export function isPicked(gid, sid) {
   return state.slipLegs.some(

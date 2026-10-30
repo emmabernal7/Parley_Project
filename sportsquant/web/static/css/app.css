@@ -505,7 +505,8 @@ input, select { font-family: inherit; }
 #chat-input-row button { background: var(--teal); border: none; color: #06120e; border-radius: 50%; width: 36px; height: 36px; font-size: 15px; flex: none; }
 .chat-suggestions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 10px; }
 .chat-suggestions button { background: var(--elevated); border: 1px solid var(--border); color: var(--text-dim);
-                           border-radius: 999px; padding: 5px 10px; font-size: 11px; }
+                           border-radius: 999px; padding: 6px 12px; font-size: 11.5px; cursor: pointer; transition: all 0.18s ease; }
+.chat-suggestions button:hover { background: var(--panel-2); color: var(--teal); border-color: var(--teal-dim); transform: translateY(-1px); }
 
 /* ---------------------------------------------------------------- loading indicators */
 #top-progress-bar {

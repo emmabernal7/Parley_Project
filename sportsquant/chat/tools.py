@@ -6,9 +6,10 @@ from typing import Dict, List, Optional
 
 from ..data.store import Store
 from ..live.manager import LiveManager
+from ..live.providers.covers import fetch_covers_consensus
 from ..markets.schema import find_selection
 from ..names import canon
-from ..odds import clv_pct, devig, edge, kelly_fraction, parlay_odds, prob_to_odds
+from ..odds import clv_pct, devig, edge, kelly_fraction, parlay_odds, parse_odds, prob_to_odds
 from ..settings import get_settings
 
 
@@ -36,30 +37,153 @@ class ToolBox:
     def find_value(self, sport: Optional[str] = None, min_edge: Optional[float] = None) -> List[Dict]:
         min_edge = get_settings().value_min_edge if min_edge is None else min_edge
         events_with_odds = self.store.get_events_with_user_odds()
-        if not events_with_odds:
-            return []
+        out = []
+        if events_with_odds:
+            for brief in self.live.list_events(sport=sport):
+                if brief["id"] not in events_with_odds:
+                    continue
+                ev = self.live.get_event(brief["id"])
+                if ev is None or ev.status == "finished":
+                    continue
+                detail = self.live.event_detail(ev.id)
+                for g in detail["groups"]:
+                    for s in g["selections"]:
+                        market_odds = s.get("user_odds")
+                        if market_odds is None:
+                            continue
+                        ev_ = edge(s["prob"], market_odds)
+                        if ev_ >= min_edge:
+                            out.append({"event": ev.title, "event_id": ev.id, "market": g["name"], "selection": s["label"],
+                                       "model_prob": round(s["prob"], 4), "your_odds": market_odds,
+                                       "fair_odds": round(s["odds"], 2), "edge_pct": round(ev_ * 100, 2),
+                                       "kelly_stake_pct": round(kelly_fraction(s["prob"], market_odds,
+                                                                              get_settings().kelly_fraction) * 100, 2)})
+            out.sort(key=lambda d: -d["edge_pct"])
+        if not out:
+            # Fallback automatically to scanning real sportsbook lines (DraftKings / ESPN BET)
+            out = self.get_best_logros(sport=sport, min_edge=min_edge)
+        return out[:20]
+
+    def get_best_logros(self, sport: Optional[str] = None, min_edge: Optional[float] = None) -> List[Dict]:
+        """Find the best +EV opportunities across upcoming events comparing model probabilities
+        against official sportsbook odds (DraftKings / ESPN BET) and user odds."""
+        target_edge = get_settings().value_min_edge if min_edge is None else min_edge
         out = []
         for brief in self.live.list_events(sport=sport):
-            if brief["id"] not in events_with_odds:
-                continue
             ev = self.live.get_event(brief["id"])
             if ev is None or ev.status == "finished":
                 continue
+            user_odds = self.store.get_user_odds(ev.id)
+            ml = ev.meta.get("moneyline") or {}
+            source = ev.meta.get("source") or "DraftKings"
             detail = self.live.event_detail(ev.id)
+            if not detail or not detail.get("groups"):
+                continue
+
             for g in detail["groups"]:
+                if g["id"] not in ("1x2", "ml"):
+                    continue
                 for s in g["selections"]:
-                    market_odds = s.get("user_odds")
-                    if market_odds is None:
-                        continue
-                    ev_ = edge(s["prob"], market_odds)
-                    if ev_ >= min_edge:
-                        out.append({"event": ev.title, "event_id": ev.id, "market": g["name"], "selection": s["label"],
-                                   "model_prob": round(s["prob"], 4), "your_odds": market_odds,
-                                   "fair_odds": round(s["odds"], 2), "edge_pct": round(ev_ * 100, 2),
-                                   "kelly_stake_pct": round(kelly_fraction(s["prob"], market_odds,
-                                                                          get_settings().kelly_fraction) * 100, 2)})
-        out.sort(key=lambda d: -d["edge_pct"])
-        return out[:20]
+                    book_odds = None
+                    source_label = ""
+                    key = f"{g['id']}:{s['id']}"
+                    if key in user_odds:
+                        book_odds = user_odds[key]
+                        source_label = "Tu cuota manual"
+                    elif s["id"] == "home" and ml.get("home"):
+                        book_odds = parse_odds(ml["home"])
+                        source_label = source
+                    elif s["id"] == "away" and ml.get("away"):
+                        book_odds = parse_odds(ml["away"])
+                        source_label = source
+                    elif s["id"] == "draw" and ml.get("draw"):
+                        book_odds = parse_odds(ml["draw"])
+                        source_label = source
+
+                    if book_odds and book_odds > 1.0:
+                        prob = s.get("prob", 0.0)
+                        if prob > 0.03:
+                            ev_ = edge(prob, book_odds)
+                            edge_pct = round(ev_ * 100, 2)
+                            if edge_pct >= round(target_edge * 100, 2):
+                                fair_odds = s.get("odds") or prob_to_odds(prob)
+                                k_stake = kelly_fraction(prob, book_odds, get_settings().kelly_fraction)
+                                out.append({
+                                    "event": ev.title,
+                                    "event_id": ev.id,
+                                    "sport": ev.sport,
+                                    "competition": ev.competition,
+                                    "market": g["name"],
+                                    "selection": s["label"],
+                                    "model_prob": round(prob, 4),
+                                    "bookmaker_odds": round(book_odds, 2),
+                                    "fair_odds": round(fair_odds, 2),
+                                    "edge_pct": edge_pct,
+                                    "source": source_label,
+                                    "kelly_stake_pct": round(k_stake * 100, 2)
+                                })
+        out.sort(key=lambda d: (-d["edge_pct"], -d["model_prob"]))
+        return out[:25]
+
+    def get_highest_payouts(self, sport: Optional[str] = None, min_odds: float = 2.10) -> List[Dict]:
+        """Find attractive underdogs or high-paying selections (odds >= min_odds) where the model
+        indicates a justified risk with non-negative or positive expectation."""
+        logros = self.get_best_logros(sport=sport, min_edge=-0.05)
+        high = [l for l in logros if l["bookmaker_odds"] >= min_odds]
+        high.sort(key=lambda d: (-d["edge_pct"], -d["bookmaker_odds"]))
+        return high[:15]
+
+    def get_sportsbook_lines(self, event_query: str) -> Dict:
+        """Compare DraftKings / ESPN BET sportsbook odds against model probabilities for a specific match."""
+        hits = self.find_event(event_query)
+        if not hits:
+            return {"error": f"No se encontró ningún evento para '{event_query}'."}
+        e = hits[0]
+        ev = self.live.get_event(e["id"])
+        if not ev:
+            return {"error": "Evento no disponible."}
+        ml = ev.meta.get("moneyline") or {}
+        tot = ev.meta.get("total_line") or ""
+        source = ev.meta.get("source") or "DraftKings"
+        detail = self.live.event_detail(ev.id)
+        return {
+            "event": ev.title,
+            "competition": ev.competition,
+            "sport": ev.sport,
+            "status": ev.status,
+            "source": source,
+            "sportsbook_moneyline": ml,
+            "sportsbook_total": tot,
+            "detail": detail
+        }
+
+    def get_covers_consensus(self, sport: Optional[str] = None) -> List[Dict]:
+        """Retrieve live public consensus data from Covers.com and highlight Fade-the-Public opportunities."""
+        raw = fetch_covers_consensus(sport=sport)
+        enriched = []
+        for item in raw:
+            c = dict(item)
+            hits = self.find_event(f"{c['team1']} {c['team2']}")
+            if hits:
+                match_ev = self.live.get_event(hits[0]["id"])
+                if match_ev:
+                    c["has_match"] = True
+                    c["event_id"] = match_ev.id
+            else:
+                c["has_match"] = False
+
+            if c["favored_pct"] >= 68:
+                c["fade_the_public"] = True
+                c["fade_advice"] = (
+                    f"El {c['favored_pct']}% del público está en {c['favored_team']}. "
+                    f"Estrategia Fade the Public: Considerar {c['underdog_team']} "
+                    f"({c['line1'] if c['underdog_team'] == c['team1'] else c['line2']}) para capturar sobreprecio de la casa."
+                )
+            else:
+                c["fade_the_public"] = False
+                c["fade_advice"] = "Consenso sin sobreprecio público crítico."
+            enriched.append(c)
+        return enriched
 
     # ------------------------------------------------------------------ parlay
     def price_parlay(self, legs: List[Dict]) -> Dict:
@@ -274,4 +398,12 @@ TOOL_SPECS = [
      "input_schema": {"type": "object", "properties": {"odds": {"type": "array", "items": {"type": "number"}},
                                                         "method": {"type": "string", "enum": ["proportional", "power", "shin"]}},
                       "required": ["odds"]}},
+    {"name": "get_best_logros", "description": "Scan upcoming games for the best value bets (+EV / logros) comparing quantitative model probabilities against real DraftKings and sportsbook odds.",
+     "input_schema": {"type": "object", "properties": {"sport": {"type": "string"}, "min_edge": {"type": "number"}}}},
+    {"name": "get_highest_payouts", "description": "Find underdogs or high-payout selections (odds >= 2.10) where the quantitative model projects favorable value.",
+     "input_schema": {"type": "object", "properties": {"sport": {"type": "string"}, "min_odds": {"type": "number"}}}},
+    {"name": "get_sportsbook_lines", "description": "Compare sportsbook odds (DraftKings / ESPN BET) with the quantitative model's fair odds for a match.",
+     "input_schema": {"type": "object", "properties": {"event_query": {"type": "string"}}, "required": ["event_query"]}},
+    {"name": "get_covers_consensus", "description": "Retrieve live public betting consensus percentages from Covers.com and detect Fade-the-Public opportunities.",
+     "input_schema": {"type": "object", "properties": {"sport": {"type": "string"}}}},
 ]
