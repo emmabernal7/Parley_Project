@@ -34,13 +34,90 @@ export function fmtClock(ev) {
       d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     );
   }
+
   const c = ev.clock || {};
-  if (c.phase === "ht") return "HT";
-  if (c.minute != null)
-    return Math.min(90, Math.round(c.minute)) + (c.minute > 90 ? "+" : "") + "'";
-  if (c.elapsed != null) return Math.round(c.elapsed * 100) + "%";
-  if (c.inning) return (c.half === "top" ? "T" : "B") + c.inning;
-  return "LIVE";
+  const isEs = state.lang === "es";
+  const sport = ev.sport || "";
+
+  // 1. Baloncesto (Basketball) & Fútbol Americano (NFL / NCAAF)
+  if (sport === "basketball" || sport === "american_football") {
+    if (c.is_halftime || c.detail?.toLowerCase().includes("half") || c.phase === "ht") {
+      return isEs ? "Medio Tiempo" : "Halftime";
+    }
+    const qLabel = isEs ? "C" : "Q";
+    const p = c.period || 1;
+    const timeStr = c.clock || (c.display && c.display.includes(":") ? c.display.split(" ")[1] || c.display : "");
+    if (c.is_ot || p > 4) {
+      const otNum = p > 4 ? ` ${p - 4}` : "";
+      return `OT${otNum}${timeStr ? " " + timeStr : ""}`.trim();
+    }
+    return `${p}${qLabel}${timeStr ? " " + timeStr : ""}`.trim() || `Q${p}`;
+  }
+
+  // 2. Hockey sobre Hielo (NHL)
+  if (sport === "hockey") {
+    if (c.is_halftime || c.detail?.toLowerCase().includes("intermission")) {
+      return isEs ? "Descanso" : "Intermission";
+    }
+    const p = c.period || 1;
+    const timeStr = c.clock || (c.display && c.display.includes(":") ? c.display.split(" ")[1] || c.display : "");
+    if (c.is_ot || p > 3) {
+      return `OT${timeStr ? " " + timeStr : ""}`.trim();
+    }
+    return `${p}P${timeStr ? " " + timeStr : ""}`.trim() || `${p}P`;
+  }
+
+  // 3. Béisbol (MLB / LVBP / LIDOM)
+  if (sport === "baseball" || c.inning) {
+    const inn = c.inning || 1;
+    const isTop = c.half === "top";
+    const arrow = isTop ? "▲" : "▼";
+    const ordSuffix = isEs
+      ? inn === 1 ? "ra" : inn === 2 ? "da" : inn === 3 ? "ra" : (inn === 7 || inn === 8) ? "va" : "ta"
+      : inn === 1 ? "st" : inn === 2 ? "nd" : inn === 3 ? "rd" : "th";
+    const halfLabel = isEs ? (isTop ? "Alta" : "Baja") : (isTop ? "Top" : "Bot");
+    const outStr = c.outs != null && c.outs > 0 ? ` · ${c.outs} ${isEs ? "out" : "out"}${c.outs === 1 ? "" : "s"}` : "";
+    return `${arrow} ${halfLabel} ${inn}${ordSuffix}${outStr}`;
+  }
+
+  // 4. Fútbol (Soccer)
+  if (sport === "soccer" || c.minute != null) {
+    if (c.phase === "ht" || c.detail?.toLowerCase().includes("half") || c.detail === "HT") {
+      return isEs ? "Entretiempo (ET)" : "Halftime (HT)";
+    }
+    if (c.minute != null) {
+      const min = Math.round(c.minute);
+      const isExtra = min > 90 || c.display?.includes("+");
+      return `${min}${isExtra ? "+" : ""}'`;
+    }
+    if (c.display) return c.display;
+  }
+
+  // 5. Motorsport / F1
+  if (sport === "motorsport") {
+    if (c.lap && c.total_laps) {
+      return isEs ? `Vuelta ${c.lap}/${c.total_laps}` : `Lap ${c.lap}/${c.total_laps}`;
+    }
+    if (c.lap) return isEs ? `Vuelta ${c.lap}` : `Lap ${c.lap}`;
+    if (c.display) return c.display;
+  }
+
+  // 6. MMA / Boxeo
+  if (sport === "mma") {
+    const r = c.round || 1;
+    const timeStr = c.clock ? ` ${c.clock}` : "";
+    return isEs ? `Round ${r}${timeStr}` : `R${r}${timeStr}`;
+  }
+
+  // 7. Tenis
+  if (sport === "tennis") {
+    if (c.set) return isEs ? `Set ${c.set}` : `Set ${c.set}`;
+    if (c.display) return c.display;
+  }
+
+  // Fallbacks limpios (nunca porcentaje genérico)
+  if (c.display && !c.display.includes("%")) return c.display;
+  return isEs ? "EN VIVO" : "LIVE";
 }
 
 export function isSameDay(d1, d2) {

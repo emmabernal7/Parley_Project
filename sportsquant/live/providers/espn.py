@@ -99,20 +99,24 @@ def _clock_soccer(comp: dict) -> Dict:
     st = comp.get("status", {})
     disp = st.get("displayClock", "0'")
     minute = st.get("clock")
-    detail = st.get("type", {}).get("detail", "") or ""
+    detail = st.get("type", {}).get("detail", "") or st.get("type", {}).get("shortDetail", "") or ""
     phase = "h1"
-    if "Half" in st.get("type", {}).get("description", "") or "HT" in detail:
+    if "Half" in st.get("type", {}).get("description", "") or "HT" in detail or "Halftime" in detail:
         phase = "ht"
     elif "2nd" in detail or (isinstance(minute, (int, float)) and minute and minute > 45):
         phase = "h2"
+    elif "Extra" in detail or "ET" in detail or "OT" in detail:
+        phase = "et"
     m = re.search(r"(\d+)", disp)
-    return {"display": disp, "phase": phase, "minute": float(m.group(1)) if m else 0.0}
+    min_val = float(m.group(1)) if m else (float(minute) if minute else 0.0)
+    return {"display": disp, "phase": phase, "minute": min_val, "detail": detail}
 
 
 def _clock_period(comp: dict, periods_reg: int) -> Dict:
     st = comp.get("status", {})
     period = int(st.get("period", 0) or 0)
     disp = st.get("displayClock", "")
+    detail = st.get("type", {}).get("shortDetail") or st.get("type", {}).get("detail") or ""
     frac = 0.0
     m = re.match(r"(\d+):(\d+)", disp or "")
     if period:
@@ -120,16 +124,65 @@ def _clock_period(comp: dict, periods_reg: int) -> Dict:
         period_len = 12 * 60 if periods_reg == 4 else 20 * 60
         elapsed_in_period = max(0.0, period_len - secs_left)
         frac = min(1.0, (min(period, periods_reg) - 1 + elapsed_in_period / period_len) / periods_reg)
-    return {"display": f"Q{period} {disp}" if periods_reg == 4 else f"P{period} {disp}", "period": period, "elapsed": frac}
+    is_ht = "Half" in detail or "HT" in detail or "Halftime" in detail
+    is_ot = period > periods_reg or "OT" in detail
+    disp_prefix = "Q" if periods_reg == 4 else "P"
+    clean_disp = f"{disp_prefix}{period} {disp}".strip() if disp else f"{disp_prefix}{period}"
+    return {
+        "display": clean_disp,
+        "period": period,
+        "clock": disp,
+        "detail": detail,
+        "is_halftime": is_ht,
+        "is_ot": is_ot,
+        "elapsed": frac,
+    }
 
 
 def _clock_baseball(comp: dict) -> Dict:
     st = comp.get("status", {})
     detail = st.get("type", {}).get("shortDetail") or st.get("type", {}).get("detail") or ""
     inning = int(st.get("period", 1) or 1)
-    half = "top" if "Top" in detail else ("bottom" if "Bot" in detail or "Bottom" in detail else "top")
+    half = "top" if ("Top" in detail or "▲" in detail or "Alta" in detail) else ("bottom" if ("Bot" in detail or "Bottom" in detail or "▼" in detail or "Baja" in detail) else "top")
     sit = comp.get("situation", {}) or {}
-    return {"display": detail, "inning": inning, "half": half, "outs": int(sit.get("outs", 0) or 0)}
+    outs = int(sit.get("outs", 0) or 0)
+    balls = int(sit.get("balls", 0) or 0)
+    strikes = int(sit.get("strikes", 0) or 0)
+    is_mid = "Mid" in detail or "End" in detail
+    return {
+        "display": detail,
+        "inning": inning,
+        "half": half,
+        "outs": outs,
+        "balls": balls,
+        "strikes": strikes,
+        "is_mid": is_mid,
+        "detail": detail,
+    }
+
+
+def _clock_motorsport(comp: dict) -> Dict:
+    st = comp.get("status", {})
+    detail = st.get("type", {}).get("shortDetail") or st.get("type", {}).get("detail") or ""
+    m = re.search(r"Lap\s*(\d+)(?:\s*(?:of|/)\s*(\d+))?", detail, re.I)
+    lap = int(m.group(1)) if m else int(st.get("period", 0) or 0)
+    total = int(m.group(2)) if (m and m.group(2)) else 0
+    return {"display": detail or (f"Lap {lap}" if lap else "En carrera"), "lap": lap, "total_laps": total, "detail": detail}
+
+
+def _clock_mma(comp: dict) -> Dict:
+    st = comp.get("status", {})
+    disp = st.get("displayClock", "")
+    period = int(st.get("period", 1) or 1)
+    detail = st.get("type", {}).get("shortDetail") or st.get("type", {}).get("detail") or ""
+    return {"display": f"R{period} {disp}".strip(), "round": period, "clock": disp, "detail": detail}
+
+
+def _clock_tennis(comp: dict) -> Dict:
+    st = comp.get("status", {})
+    period = int(st.get("period", 1) or 1)
+    detail = st.get("type", {}).get("shortDetail") or st.get("type", {}).get("detail") or ""
+    return {"display": f"Set {period}", "set": period, "detail": detail}
 
 
 def _team_meta(home: dict, away: dict) -> Dict:
@@ -208,6 +261,12 @@ def _parse_events_from_data(data: dict, sport: str, league_slug: str, clockfn=No
                 clock = _clock_soccer(comp)
             elif sport == "baseball":
                 clock = _clock_baseball(comp)
+            elif sport == "motorsport":
+                clock = _clock_motorsport(comp)
+            elif sport == "mma":
+                clock = _clock_mma(comp)
+            elif sport == "tennis":
+                clock = _clock_tennis(comp)
             elif clockfn:
                 clock = clockfn(comp)
                 
