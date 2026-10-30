@@ -12,7 +12,11 @@ import time
 from typing import Dict, List, Optional
 
 import httpx
-from bs4 import BeautifulSoup
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +53,7 @@ def _clean_pct(text: str) -> Optional[int]:
 def parse_covers_html(html: str) -> List[Dict]:
     """Parse Covers.com consensus table into structured list."""
     out: List[Dict] = []
-    if not html:
+    if not html or BeautifulSoup is None:
         return out
 
     soup = BeautifulSoup(html, "html.parser")
