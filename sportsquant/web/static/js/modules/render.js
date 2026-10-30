@@ -1,7 +1,7 @@
 // SportsQuant - DOM Rendering and UI Presentation Layer (ES Modules)
 
-import { state, I18N, $, $$, el, getSports, getTabOrder, toast } from "./state.js?v=2.7";
-import { setUserOdds } from "./api.js?v=2.7";
+import { state, I18N, $, $$, el, getSports, getTabOrder, toast } from "./state.js?v=2.8";
+import { setUserOdds } from "./api.js?v=2.8";
 
 // ---------------------------------------------------------------- Formatting
 export function decimalToAmerican(d) {
@@ -803,35 +803,164 @@ export function renderBetsModal(bets, onDeleteBet, onClearAllBets) {
     box.innerHTML = `<p style='color:var(--text-faint);text-align:center;padding:24px 0;'>${state.lang === "es" ? "Sin apuestas simuladas aún." : "No paper bets yet."}</p>`;
     return;
   }
+  const isEs = state.lang === "es";
   const frag = document.createDocumentFragment();
   bets.forEach((b) => {
-    const row = el("div", "slip-leg");
+    // 1. Parse note metadata if available
+    let meta = null;
+    if (typeof b.note === "string" && b.note.trim().startsWith("{")) {
+      try {
+        meta = JSON.parse(b.note);
+      } catch (e) {
+        meta = null;
+      }
+    }
+
+    const legs = b.legs || [];
+    const totalOdds = meta && meta.odds_used ? Number(meta.odds_used) : legs.reduce((acc, l) => acc * (Number(l.odds) || 1.0), 1.0);
+    const stake = Number(b.stake) || 0.0;
+    const pnl = Number(b.pnl) || 0.0;
+    const potentialPayout = meta && meta.potential_payout ? Number(meta.potential_payout) : (stake * totalOdds);
+    const potentialProfit = meta && meta.potential_profit ? Number(meta.potential_profit) : (potentialPayout - stake);
+    const trueProbPct = meta && meta.true_probability != null 
+      ? (Number(meta.true_probability) * 100).toFixed(1) + "%" 
+      : (legs.length ? (legs.reduce((acc, l) => acc * (Number(l.prob) || (l.odds ? 1 / l.odds : 0.5)), 1.0) * 100).toFixed(1) + "%" : "-");
+
     const statusColor =
-      b.status === "won" ? "var(--teal)" : b.status === "lost" ? "var(--coral)" : "var(--text-dim)";
+      b.status === "won" ? "var(--teal)" : b.status === "lost" ? "var(--coral)" : "var(--amber)";
     const statusLabel =
-      b.status === "won" ? (state.lang === "es" ? "GANADA" : "WON")
-      : b.status === "lost" ? (state.lang === "es" ? "PERDIDA" : "LOST")
-      : (state.lang === "es" ? "ABIERTA" : "OPEN");
-    row.innerHTML = `
-      <div class="top">
-        <span class="sel">${state.lang === "es" ? "Monto" : "Stake"} $${b.stake.toFixed(2)} - <span style="color:${statusColor}">${statusLabel}</span></span>
-        <div style="display:flex;align-items:center;">
-          <span class="num" style="color:${b.pnl > 0 ? "var(--teal)" : b.pnl < 0 ? "var(--coral)" : "var(--text-dim)"}">
-            ${b.pnl > 0 ? "+" : ""}${b.pnl.toFixed(2)}
-          </span>
-          <button class="bet-del-btn" title="${state.lang === "es" ? "Eliminar esta apuesta" : "Delete this bet"}">🗑</button>
+      b.status === "won" ? (isEs ? "GANADA" : "WON")
+      : b.status === "lost" ? (isEs ? "PERDIDA" : "LOST")
+      : (isEs ? "ABIERTA" : "OPEN");
+
+    const card = el("div", "bet-card");
+    card.id = `bet-card-${b.id}`;
+
+    // Header summary row (clickable to expand/collapse)
+    const header = el("div", "bet-card-header");
+    header.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+        <span class="bet-card-chevron">▶</span>
+        <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <strong style="font-size:13px;color:var(--text);">${isEs ? "Apuesta #" : "Bet #"}${b.id}</strong>
+            <span style="font-size:10.5px;font-weight:700;color:${statusColor};background:${statusColor}18;padding:2px 7px;border-radius:4px;border:1px solid ${statusColor}40;">
+              ${statusLabel}
+            </span>
+            <span style="font-size:11.5px;color:var(--text-faint);">${legs.length} ${legs.length === 1 ? (isEs ? "selección" : "pick") : (isEs ? "selecciones" : "picks")}</span>
+          </div>
+          <div style="font-size:12px;color:var(--text-dim);">
+            ${isEs ? "Invertido:" : "Stake:"} <strong style="color:var(--text);font-family:var(--font-num);">$${stake.toFixed(2)}</strong>
+            ${b.status === "open" 
+              ? ` · ${isEs ? "Retorno est.:" : "Est. payout:"} <strong style="color:var(--amber);font-family:var(--font-num);">$${potentialPayout.toFixed(2)}</strong>` 
+              : ` · PnL: <strong style="color:${pnl >= 0 ? "var(--teal)" : "var(--coral)"};font-family:var(--font-num);">${pnl >= 0 ? "+" : ""}$${pnl.toFixed(2)}</strong>`
+            }
+          </div>
         </div>
       </div>
-      <div class="ev">${b.legs.map((l) => l.label || l.key).join(" · ")}</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-left:8px;">
+        <span class="bet-leg-odds" title="${isEs ? "Cuota combinada de la apuesta" : "Total combined odds"}">${fmtOdds(totalOdds)}</span>
+        <button class="bet-del-btn" title="${isEs ? "Eliminar esta apuesta" : "Delete this bet"}">🗑</button>
+      </div>
     `;
-    const delBtn = row.querySelector(".bet-del-btn");
+
+    // Toggle expand on header click
+    header.onclick = (e) => {
+      if (e.target.closest(".bet-del-btn")) return;
+      card.classList.toggle("expanded");
+    };
+
+    const delBtn = header.querySelector(".bet-del-btn");
     if (delBtn && onDeleteBet) {
       delBtn.onclick = (e) => {
         e.stopPropagation();
         onDeleteBet(b.id);
       };
     }
-    frag.appendChild(row);
+
+    // Body with metrics and each leg breakdown
+    const body = el("div", "bet-card-body");
+    
+    // 1. Metrics Grid
+    const metricsGrid = el("div", "bet-metrics-grid");
+    metricsGrid.innerHTML = `
+      <div class="bet-metric-item">
+        <span class="bet-metric-label">${isEs ? "Monto Invertido" : "Stake"}</span>
+        <span class="bet-metric-val" style="color:var(--text);">$${stake.toFixed(2)}</span>
+      </div>
+      <div class="bet-metric-item">
+        <span class="bet-metric-label">${isEs ? "Cuota Total" : "Total Odds"}</span>
+        <span class="bet-metric-val" style="color:var(--teal);">${fmtOdds(totalOdds)}</span>
+      </div>
+      <div class="bet-metric-item">
+        <span class="bet-metric-label">${isEs ? "Ganancia Neta" : "Net Profit"}</span>
+        <span class="bet-metric-val" style="color:${b.status === 'lost' ? 'var(--coral)' : 'var(--teal)'};">
+          ${b.status === "won" ? "+" + pnl.toFixed(2) : b.status === "lost" ? pnl.toFixed(2) : "+" + potentialProfit.toFixed(2)}
+        </span>
+      </div>
+      <div class="bet-metric-item">
+        <span class="bet-metric-label">${isEs ? "Retorno Total" : "Total Payout"}</span>
+        <span class="bet-metric-val" style="color:var(--amber);">$${potentialPayout.toFixed(2)}</span>
+      </div>
+      <div class="bet-metric-item">
+        <span class="bet-metric-label">${isEs ? "Probabilidad Conjunta" : "True Probability"}</span>
+        <span class="bet-metric-val" style="color:var(--blue);">${trueProbPct}</span>
+      </div>
+    `;
+    body.appendChild(metricsGrid);
+
+    // 2. Legs Title
+    const legsTitle = el("div", "bet-legs-title");
+    legsTitle.textContent = isEs ? "📋 Desglose de Jugadas y Porcentajes:" : "📋 Selections & Probabilities:";
+    body.appendChild(legsTitle);
+
+    // 3. Render Each Leg
+    legs.forEach((leg) => {
+      const legEl = el("div", "bet-leg-item");
+      const legOdds = Number(leg.odds) || 1.0;
+      const legProb = leg.prob != null ? Number(leg.prob) : (legOdds > 1.0 ? 1.0 / legOdds : 0.5);
+      const legProbPct = (legProb * 100).toFixed(1);
+      
+      const legRes = leg.result || (b.status === "won" ? "won" : b.status === "lost" ? "lost" : "open");
+      const resIcon = legRes === "won" ? "✅" : legRes === "lost" ? "❌" : "⏳";
+      const resLabel = legRes === "won" ? (isEs ? "Acertada" : "Won") : legRes === "lost" ? (isEs ? "Fallada" : "Lost") : (isEs ? "Pendiente" : "Pending");
+      const resColor = legRes === "won" ? "var(--teal)" : legRes === "lost" ? "var(--coral)" : "var(--text-dim)";
+
+      let eventTitle = leg.event || "";
+      let marketSel = leg.selection ? `${leg.selection} (${leg.market || ""})` : (leg.label || leg.key);
+      if (!eventTitle && leg.label && leg.label.includes(" - ")) {
+        const parts = leg.label.split(" - ");
+        eventTitle = parts[0];
+        marketSel = parts.slice(1).join(" - ");
+      }
+
+      legEl.innerHTML = `
+        <div class="bet-leg-head">
+          <div style="min-width:0;flex:1;padding-right:8px;">
+            <div class="bet-leg-event">${eventTitle || (isEs ? "Evento Deportivo" : "Match")}</div>
+            <div class="bet-leg-market"><span style="color:var(--amber);font-weight:700;">${marketSel}</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="bet-leg-odds">${fmtOdds(legOdds)}</span>
+            <span style="font-size:11px;color:${resColor};font-weight:600;">${resIcon} ${resLabel}</span>
+          </div>
+        </div>
+        <div class="bet-prob-bar-container">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;">
+            <span style="color:var(--text-dim);">${isEs ? "🎯 Probabilidad estimada por el modelo:" : "🎯 Model probability:"}</span>
+            <strong style="color:var(--teal);font-size:13px;font-family:var(--font-num);">${legProbPct}%</strong>
+          </div>
+          <div style="width:100%;height:6px;background:var(--elevated);border-radius:999px;margin-top:5px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);">
+            <div style="width:${Math.min(100, Math.max(0, legProbPct))}%;height:100%;background:linear-gradient(90deg, var(--teal), #00f2fe);border-radius:999px;"></div>
+          </div>
+        </div>
+      `;
+      body.appendChild(legEl);
+    });
+
+    card.appendChild(header);
+    card.appendChild(body);
+    frag.appendChild(card);
   });
   box.innerHTML = "";
   box.appendChild(frag);

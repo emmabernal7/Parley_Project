@@ -1,6 +1,7 @@
 """FastAPI app.  Run with: python run.py  (see README.md)."""
 from __future__ import annotations
 
+import json
 import logging
 import webbrowser
 from contextlib import asynccontextmanager
@@ -202,7 +203,22 @@ def place_bet(body: PlaceBet):
     for leg, l in zip(legs, priced["legs"]):
         leg.setdefault("odds", round(priced["odds_used"] ** (1.0 / len(legs)), 4))
         leg["label"] = f"{l['event']} - {l['selection']} ({l['market']})"
-    slip_id = state["store"].add_slip(body.stake, legs, note=f"{len(legs)}-leg paper bet")
+        leg["event"] = l.get("event", "")
+        leg["market"] = l.get("market", "")
+        leg["selection"] = l.get("selection", "")
+        leg["prob"] = round(float(l.get("prob", 0.0)), 4)
+
+    total_odds = float(priced.get("odds_used") or 1.0)
+    note_payload = json.dumps({
+        "desc": f"{len(legs)}-leg paper bet",
+        "odds_used": round(total_odds, 2),
+        "true_probability": priced.get("true_probability"),
+        "fair_parlay_odds": priced.get("fair_parlay_odds"),
+        "potential_payout": round(body.stake * total_odds, 2),
+        "potential_profit": round(body.stake * (total_odds - 1.0), 2),
+        "expected_value_pct": priced.get("expected_value_pct"),
+    })
+    slip_id = state["store"].add_slip(body.stake, legs, note=note_payload)
     state["chat"].clear_slip(body.session_id)
     return {"id": slip_id, "priced": priced}
 

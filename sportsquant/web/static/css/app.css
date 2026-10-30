@@ -474,6 +474,129 @@ input, select { font-family: inherit; }
               padding: 10px; font-weight: 700; font-size: 13px; }
 .btn-primary:disabled { opacity: 0.4; }
 
+/* ---------------------------------------------------------------- bet history cards (expandable) */
+.bet-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.bet-card:hover {
+  border-color: var(--teal-dim);
+}
+.bet-card-header {
+  padding: 11px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  background: var(--elevated);
+  transition: background 0.15s;
+}
+.bet-card-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.light-theme .bet-card-header:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+.bet-card-chevron {
+  display: inline-block;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-right: 8px;
+}
+.bet-card.expanded .bet-card-chevron {
+  transform: rotate(90deg);
+  color: var(--teal);
+}
+.bet-card-body {
+  display: none;
+  padding: 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+.bet-card.expanded .bet-card-body {
+  display: block;
+}
+.bet-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+.bet-metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bet-metric-label {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.bet-metric-val {
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.bet-legs-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.bet-leg-item {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.bet-leg-item:last-child {
+  margin-bottom: 0;
+}
+.bet-leg-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+.bet-leg-event {
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--text);
+}
+.bet-leg-market {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.bet-leg-odds {
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--teal);
+  background: rgba(18, 214, 168, 0.1);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid rgba(18, 214, 168, 0.25);
+  white-space: nowrap;
+}
+.bet-prob-bar-container {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+
 /* ---------------------------------------------------------------- chat */
 #chat-fab {
   position: fixed; right: 22px; bottom: 22px; z-index: 39; width: 52px; height: 52px; border-radius: 50%;
