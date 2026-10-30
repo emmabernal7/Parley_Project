@@ -51,6 +51,11 @@ def index():
     return FileResponse(str(STATIC_DIR / "index.html"))
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse(str(STATIC_DIR / "favicon.ico"))
+
+
 @app.get("/api/settings")
 def get_settings_api():
     return get_settings().public()

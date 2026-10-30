@@ -146,7 +146,16 @@ input, select { font-family: inherit; }
   border-bottom: 1px solid var(--border);
   min-width: 0;
 }
-.brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 16px; letter-spacing: 0.2px; white-space: nowrap; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; letter-spacing: 0.2px; white-space: nowrap; }
+.brand .logo {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.4);
+  border: 1px solid rgba(212, 196, 251, 0.5);
+  flex-shrink: 0;
+}
 .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 10px var(--teal); }
 .brand .tag { color: var(--text-faint); font-weight: 500; font-size: 11px; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; }
 
