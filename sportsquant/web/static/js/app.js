@@ -1,13 +1,13 @@
 // SportsQuant - Main Application Orchestrator (ES Module Entrypoint)
 
-import { state, $, $$, toast } from "./modules/state.js?v=2.5";
+import { state, $, $$, toast } from "./modules/state.js?v=2.6";
 import {
   api,
   getEvents,
   getEvent,
   refreshEvents,
   getBets,
-} from "./modules/api.js?v=2.5";
+} from "./modules/api.js?v=2.6";
 import {
   renderRail,
   renderDateFilter,
@@ -24,7 +24,7 @@ import {
   renderBetsModal,
   applyTranslations,
   renderGroupsAndInfo,
-} from "./modules/render.js?v=2.5";
+} from "./modules/render.js?v=2.6";
 import {
   isPicked,
   toggleSlip,
@@ -35,8 +35,8 @@ import {
   updateSlipCalculations,
   deleteBetAction,
   clearAllBetsAction,
-} from "./modules/slip.js?v=2.5";
-import { wireChat, syncPanelPositions } from "./modules/chat.js?v=2.5";
+} from "./modules/slip.js?v=2.6";
+import { wireChat, syncPanelPositions } from "./modules/chat.js?v=2.6";
 
 // ---------------------------------------------------------------- Detail Helpers
 function rerenderCurrentDetail() {

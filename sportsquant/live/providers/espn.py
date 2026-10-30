@@ -306,10 +306,10 @@ def fetch_soccer(league_slug: str, days_ahead: int = 1) -> List[Event]:
             if ev_obj.id not in seen:
                 seen.add(ev_obj.id)
                 events.append(ev_obj)
-    # 2. If upcoming days requested, fetch tomorrow
-    if days_ahead > 0:
+    # 2. Fetch today and upcoming days explicitly to ensure today's slate is never skipped
+    if days_ahead >= 0:
         today = datetime.now(timezone.utc)
-        for offset in range(1, min(days_ahead, 2) + 1):
+        for offset in range(0, min(days_ahead, 3) + 1):
             d = (today + timedelta(days=offset)).strftime("%Y%m%d")
             data = _get(f"{BASE}/soccer/{league_slug}/scoreboard?dates={d}")
             if not data:
@@ -338,9 +338,9 @@ def fetch_period_sport(sport: str, league_slug: str, days_ahead: int = 1) -> Lis
             if ev_obj.id not in seen:
                 seen.add(ev_obj.id)
                 events.append(ev_obj)
-    if days_ahead > 0:
+    if days_ahead >= 0:
         today = datetime.now(timezone.utc)
-        for offset in range(1, min(days_ahead, 2) + 1):
+        for offset in range(0, min(days_ahead, 3) + 1):
             d = (today + timedelta(days=offset)).strftime("%Y%m%d")
             data = _get(f"{BASE}/{espn_sport}/{league_slug}/scoreboard?dates={d}")
             if not data:
@@ -364,9 +364,9 @@ def fetch_baseball(league_slug: str, days_ahead: int = 1) -> List[Event]:
             if ev_obj.id not in seen:
                 seen.add(ev_obj.id)
                 events.append(ev_obj)
-    if days_ahead > 0:
+    if days_ahead >= 0:
         today = datetime.now(timezone.utc)
-        for offset in range(1, min(days_ahead, 2) + 1):
+        for offset in range(0, min(days_ahead, 3) + 1):
             d = (today + timedelta(days=offset)).strftime("%Y%m%d")
             data = _get(f"{BASE}/baseball/{league_slug}/scoreboard?dates={d}")
             if not data:

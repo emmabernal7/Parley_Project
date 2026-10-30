@@ -1,7 +1,7 @@
 // SportsQuant - DOM Rendering and UI Presentation Layer (ES Modules)
 
-import { state, I18N, $, $$, el, getSports, getTabOrder, toast } from "./state.js?v=2.5";
-import { setUserOdds } from "./api.js?v=2.5";
+import { state, I18N, $, $$, el, getSports, getTabOrder, toast } from "./state.js?v=2.6";
+import { setUserOdds } from "./api.js?v=2.6";
 
 // ---------------------------------------------------------------- Formatting
 export function decimalToAmerican(d) {
@@ -179,7 +179,7 @@ export function fmtScheduleTime(ev) {
     return `<span class="live-dot"></span> EN VIVO ${fmtClock(ev)}`;
   }
   if (ev.status === "finished") {
-    return "Final";
+    return state.lang === "es" ? "Final" : "Final";
   }
   const d = new Date(ev.kickoff);
   const now = new Date();
@@ -193,9 +193,9 @@ export function fmtScheduleTime(ev) {
     d.getDate() === tom.getDate() &&
     d.getMonth() === tom.getMonth() &&
     d.getFullYear() === tom.getFullYear();
-  const timeStr = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  if (isToday) return `🕒 Hoy ${timeStr}`;
-  if (isTomorrow) return `🕒 Mañana ${timeStr}`;
+  const timeStr = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (isToday) return state.lang === "es" ? `🕒 Hoy ${timeStr}` : `🕒 Today ${timeStr}`;
+  if (isTomorrow) return state.lang === "es" ? `🕒 Mañana ${timeStr}` : `🕒 Tomorrow ${timeStr}`;
   const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   return `📅 ${dateStr} ${timeStr}`;
 }
@@ -606,12 +606,19 @@ export function renderHeader(d) {
   const confCls = conf === "ok" ? "conf-ok" : conf === "demo" ? "conf-demo" : "conf-low";
   const badgeText = conf === "demo" ? t.demo_model : conf === "ok" ? t.fitted_model : t.low_confidence;
   const backBtnText = state.lang === "es" ? "‹ Partidos" : "‹ Matches";
-  const statusClock =
-    ev.status === "live"
-      ? "● " + (state.lang === "es" ? "EN VIVO" : "LIVE") + " - " + fmtClock(ev)
-      : ev.status === "finished"
-      ? (state.lang === "es" ? "Tiempo Completo (FT)" : "Full time")
-      : (state.lang === "es" ? "Inicio: " : "Kickoff: ") + new Date(ev.kickoff).toLocaleString();
+  let statusClock = "";
+  if (ev.status === "live") {
+    statusClock = "● " + (state.lang === "es" ? "EN VIVO" : "LIVE") + " - " + fmtClock(ev);
+  } else if (ev.status === "finished") {
+    statusClock = state.lang === "es" ? "Tiempo Completo (FT)" : "Full time (FT)";
+  } else {
+    const d = new Date(ev.kickoff);
+    const timeStr = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const dateStr = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    const tzShort = new Date().toLocaleTimeString([], { timeZoneName: "short" }).split(" ")[2] || "";
+    const tzLabel = tzShort ? `(${tzShort})` : "";
+    statusClock = (state.lang === "es" ? "Inicio: " : "Kickoff: ") + `${dateStr} · ${timeStr} ${tzLabel}`.trim();
+  }
 
   box.innerHTML = `
     <div class="dh-top"><button class="back-btn" id="back-btn">${backBtnText}</button><span>${ev.competition}</span></div>

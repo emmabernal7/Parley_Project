@@ -1,8 +1,8 @@
 // SportsQuant - Quant Assistant & Conversational Chat Module (ES Modules)
 
-import { state, $, el } from "./state.js?v=2.5";
-import { sendChatMessage } from "./api.js?v=2.5";
-import { refreshSlip } from "./slip.js?v=2.5";
+import { state, $, el } from "./state.js?v=2.6";
+import { sendChatMessage } from "./api.js?v=2.6";
+import { refreshSlip } from "./slip.js?v=2.6";
 
 export function addMsg(text, who) {
   const box = $("#chat-msgs");
