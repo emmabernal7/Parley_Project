@@ -1,13 +1,13 @@
 // SportsQuant - Main Application Orchestrator (ES Module Entrypoint)
 
-import { state, $, $$, toast } from "./modules/state.js";
+import { state, $, $$, toast } from "./modules/state.js?v=2.5";
 import {
   api,
   getEvents,
   getEvent,
   refreshEvents,
   getBets,
-} from "./modules/api.js";
+} from "./modules/api.js?v=2.5";
 import {
   renderRail,
   renderDateFilter,
@@ -24,7 +24,7 @@ import {
   renderBetsModal,
   applyTranslations,
   renderGroupsAndInfo,
-} from "./modules/render.js";
+} from "./modules/render.js?v=2.5";
 import {
   isPicked,
   toggleSlip,
@@ -32,8 +32,8 @@ import {
   clearSlipAction,
   placePaperBetAction,
   refreshBankrollDisplay,
-} from "./modules/slip.js";
-import { wireChat, syncPanelPositions } from "./modules/chat.js";
+} from "./modules/slip.js?v=2.5";
+import { wireChat, syncPanelPositions } from "./modules/chat.js?v=2.5";
 
 // ---------------------------------------------------------------- Detail Helpers
 function rerenderCurrentDetail() {
@@ -187,20 +187,19 @@ function wireStatic() {
   // Theme toggle
   const themeBtn = $("#theme-toggle");
   const currentTheme = localStorage.getItem("sportsquant_theme") || "dark";
-  if (currentTheme === "light") {
-    document.body.classList.add("light-theme");
-    if (themeBtn) themeBtn.textContent = "🌙";
-  } else {
-    document.body.classList.remove("light-theme");
-    if (themeBtn) themeBtn.textContent = "☀️";
-  }
+  const isLight = currentTheme === "light";
+  document.documentElement.classList.toggle("light-theme", isLight);
+  document.body.classList.toggle("light-theme", isLight);
+  if (themeBtn) themeBtn.textContent = isLight ? "🌙" : "☀️";
+
   if (themeBtn) {
     themeBtn.onclick = () => {
-      const isLight = document.body.classList.toggle("light-theme");
-      localStorage.setItem("sportsquant_theme", isLight ? "light" : "dark");
-      themeBtn.textContent = isLight ? "🌙" : "☀️";
+      const active = document.documentElement.classList.toggle("light-theme");
+      document.body.classList.toggle("light-theme", active);
+      localStorage.setItem("sportsquant_theme", active ? "light" : "dark");
+      themeBtn.textContent = active ? "🌙" : "☀️";
       toast(
-        isLight
+        active
           ? state.lang === "es" ? "Tema claro activado" : "Light theme activated"
           : state.lang === "es" ? "Tema oscuro activado" : "Dark theme activated"
       );

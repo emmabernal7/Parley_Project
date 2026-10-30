@@ -1,7 +1,7 @@
 // SportsQuant - DOM Rendering and UI Presentation Layer (ES Modules)
 
-import { state, I18N, $, $$, el, getSports, getTabOrder, toast } from "./state.js";
-import { setUserOdds } from "./api.js";
+import { state, I18N, $, $$, el, getSports, getTabOrder, toast } from "./state.js?v=2.5";
+import { setUserOdds } from "./api.js?v=2.5";
 
 // ---------------------------------------------------------------- Formatting
 export function decimalToAmerican(d) {
@@ -809,7 +809,7 @@ export function renderBetsModal(bets) {
 export function applyTranslations(isPickedFn, onToggleSlip, onDetailRefresh) {
   const t = I18N[state.lang];
   const tagPaper = $("#tag-paper");
-  if (tagPaper) tagPaper.textContent = t.paper_trading;
+  if (tagPaper) tagPaper.textContent = "Parley Project by JS-JT-EB 2026";
   const searchInput = $("#search-input");
   if (searchInput) searchInput.placeholder = t.search_placeholder;
   const txtReload = $("#txt-reload");

@@ -23,6 +23,7 @@
   --font-num: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+html.light-theme,
 body.light-theme {
   --bg: #f1f5f9;
   --panel: #ffffff;
@@ -39,71 +40,76 @@ body.light-theme {
   --violet: #6366f1;
 }
 
-body.light-theme #topbar,
-body.light-theme #rail,
-body.light-theme .group-card,
-body.light-theme .info-card,
-body.light-theme .match-row {
+html {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+.light-theme #topbar,
+.light-theme #rail,
+.light-theme .group-card,
+.light-theme .info-card,
+.light-theme .match-row {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
-body.light-theme .match-row.selected {
+.light-theme .match-row.selected {
   background: #f0fdfa;
   border-color: var(--teal);
   box-shadow: 0 0 0 1px var(--teal), 0 4px 12px rgba(13, 148, 136, 0.12);
 }
 
-body.light-theme #searchbox input {
+.light-theme #searchbox input {
   background: #ffffff;
 }
 
-body.light-theme .btn-refresh {
+.light-theme .btn-refresh {
   background: rgba(13, 148, 136, 0.1);
   color: #0d9488;
   border-color: #0d9488;
 }
 
-body.light-theme .btn-refresh:hover {
+.light-theme .btn-refresh:hover {
   background: #0d9488;
   color: #ffffff;
 }
 
-body.light-theme .chip {
+.light-theme .chip {
   background: #ffffff;
 }
 
-body.light-theme .chip.active {
+.light-theme .chip.active {
   background: #0d9488;
   color: #ffffff;
 }
 
-body.light-theme .sel-btn {
+.light-theme .sel-btn {
   background: #f8fafc;
 }
 
-body.light-theme .sel-btn.picked {
+.light-theme .sel-btn.picked {
   background: #0d9488;
   color: #ffffff;
   border-color: #0d9488;
 }
 
-body.light-theme .sel-btn.picked .sel-label,
-body.light-theme .sel-btn.picked .sel-odds {
+.light-theme .sel-btn.picked .sel-label,
+.light-theme .sel-btn.picked .sel-odds {
   color: #ffffff;
 }
 
-body.light-theme .odds-toggle button.active,
-body.light-theme .lang-toggle button.active {
+.light-theme .odds-toggle button.active,
+.light-theme .lang-toggle button.active {
   background: #0d9488;
   color: #ffffff;
 }
 
-body.light-theme #floating-chat {
+.light-theme #floating-chat {
   background: #ffffff;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14);
 }
 
-body.light-theme .chat-bubble.assistant {
+.light-theme .chat-bubble.assistant {
   background: #f1f5f9;
 }
 
@@ -155,6 +161,7 @@ input, select { font-family: inherit; }
   letter-spacing: 0.2px;
   white-space: nowrap;
   line-height: 1;
+  flex-shrink: 0;
 }
 .brand .brand-ico,
 .brand .logo,
@@ -176,9 +183,30 @@ input, select { font-family: inherit; }
   display: inline-flex;
   align-items: center;
   line-height: 1;
+  font-weight: 800;
 }
 .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 10px var(--teal); }
-.brand .tag { color: var(--text-faint); font-weight: 500; font-size: 11px; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; }
+.brand .tag {
+  display: inline-flex;
+  align-items: center;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.15);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  border: 1px solid rgba(99, 102, 241, 0.45);
+  border-radius: 5px;
+  padding: 3px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.18);
+}
+.light-theme .brand .tag {
+  color: #4338ca;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  box-shadow: 0 1px 3px rgba(67, 56, 202, 0.1);
+}
 
 #searchbox { flex: 1; max-width: 420px; position: relative; }
 #searchbox input {
