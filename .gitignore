@@ -10,6 +10,8 @@ __pycache__/
 
 # Database & SQLite files
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 data/sportsquant.db

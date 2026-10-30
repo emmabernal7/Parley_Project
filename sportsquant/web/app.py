@@ -53,7 +53,7 @@ def index():
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    return FileResponse(str(STATIC_DIR / "favicon.ico"))
+    return FileResponse(str(STATIC_DIR / "favicon.ico"), media_type="image/x-icon")
 
 
 @app.get("/api/settings")

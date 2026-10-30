@@ -147,13 +147,15 @@ input, select { font-family: inherit; }
   min-width: 0;
 }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; letter-spacing: 0.2px; white-space: nowrap; }
+.brand .brand-ico,
 .brand .logo {
   width: 26px;
   height: 26px;
   border-radius: 6px;
   object-fit: cover;
-  box-shadow: 0 0 10px rgba(167, 139, 250, 0.4);
-  border: 1px solid rgba(212, 196, 251, 0.5);
+  box-shadow: 0 0 10px rgba(155, 140, 255, 0.45);
+  border: 1px solid rgba(155, 140, 255, 0.5);
+  display: block;
   flex-shrink: 0;
 }
 .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 10px var(--teal); }
