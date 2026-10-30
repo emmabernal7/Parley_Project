@@ -107,6 +107,8 @@ async function handleSelectSport(sportId) {
 
 // ---------------------------------------------------------------- Events Ingestion / Polling
 async function loadEvents(isInitialOrForce) {
+  if (document.hidden && !isInitialOrForce) return;
+
   if (isInitialOrForce || !state.events.length) {
     showLoadingBar();
     renderListLoading();
@@ -118,13 +120,19 @@ async function loadEvents(isInitialOrForce) {
 
   try {
     const evs = await getEvents(state.sport);
+    const evsSig = JSON.stringify(evs.map((e) => [e.id, e.status, e.main_market]));
+    const hasChanged = isInitialOrForce || state._lastEvsSig !== evsSig;
+    state._lastEvsSig = evsSig;
     state.events = evs;
-    renderDateFilter(
-      () => renderMatchList((id) => selectEvent(id)),
-      handleManualRefresh
-    );
-    renderCompFilter(state.events, () => renderMatchList((id) => selectEvent(id)));
-    renderMatchList((id) => selectEvent(id));
+
+    if (hasChanged) {
+      renderDateFilter(
+        () => renderMatchList((id) => selectEvent(id)),
+        handleManualRefresh
+      );
+      renderCompFilter(state.events, () => renderMatchList((id) => selectEvent(id)));
+      renderMatchList((id) => selectEvent(id));
+    }
 
     if (!isInitialOrForce && state.selectedId && state.events.some((e) => e.id === state.selectedId)) {
       return;
@@ -163,11 +171,15 @@ async function handleManualRefresh(btn) {
 }
 
 function startPolling() {
-  setInterval(() => loadEvents(false), 6000);
   setInterval(() => {
-    if (state.selectedId) handleDetailRefresh();
-  }, 4000);
-  setInterval(refreshBankrollDisplay, 15000);
+    if (!document.hidden) loadEvents(false);
+  }, 12000);
+  setInterval(() => {
+    if (state.selectedId && !document.hidden) handleDetailRefresh();
+  }, 8000);
+  setInterval(() => {
+    if (!document.hidden) refreshBankrollDisplay();
+  }, 30000);
 }
 
 // ---------------------------------------------------------------- Static Listeners Wiring

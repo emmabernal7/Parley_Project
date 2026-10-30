@@ -86,7 +86,8 @@ class LiveManager:
             self._last_schedule = now
             if "espn" in s.providers:
                 self._refresh_espn()
-            self._refresh_sofascore()
+            if "sofascore" in s.providers:
+                self._refresh_sofascore()
         self._prune()
 
     def _refresh_demo(self) -> None:
@@ -148,6 +149,13 @@ class LiveManager:
             self.events = {k: v for k, v in self.events.items()
                            if (v.source != "demo" or s.enable_demo) and (v.status != "finished" or v.kickoff.timestamp() > cutoff)}
 
+    def _has_user_odds(self, event_id: str) -> bool:
+        now = time.time()
+        if now - getattr(self, "_last_user_odds_check", 0.0) > 10.0:
+            self._events_with_user_odds = set(self.store.get_events_with_user_odds())
+            self._last_user_odds_check = now
+        return event_id in getattr(self, "_events_with_user_odds", set())
+
     def quick_main_market(self, ev: Event) -> Optional[Dict]:
         now = time.time()
         ttl = 2.5 if ev.status == "live" else 300.0
@@ -156,7 +164,7 @@ class LiveManager:
             if now - ts < ttl:
                 return cached_g0
 
-        user_odds = self.store.get_user_odds(ev.id)
+        user_odds = self.store.get_user_odds(ev.id) if self._has_user_odds(ev.id) else {}
         cache_key = f"{ev.id}:{hash(frozenset(user_odds.items())) if user_odds else ''}"
         if cache_key in self._price_cache:
             ts, cached_res = self._price_cache[cache_key]
