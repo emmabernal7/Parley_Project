@@ -1,13 +1,13 @@
 // SportsQuant - Main Application Orchestrator (ES Module Entrypoint)
 
-import { state, $, $$, toast } from "./modules/state.js?v=2.8";
+import { state, $, $$, toast } from "./modules/state.js?v=2.9";
 import {
   api,
   getEvents,
   getEvent,
   refreshEvents,
   getBets,
-} from "./modules/api.js?v=2.8";
+} from "./modules/api.js?v=2.9";
 import {
   renderRail,
   renderDateFilter,
@@ -24,7 +24,7 @@ import {
   renderBetsModal,
   applyTranslations,
   renderGroupsAndInfo,
-} from "./modules/render.js?v=2.8";
+} from "./modules/render.js?v=2.9";
 import {
   isPicked,
   toggleSlip,
@@ -35,8 +35,8 @@ import {
   updateSlipCalculations,
   deleteBetAction,
   clearAllBetsAction,
-} from "./modules/slip.js?v=2.8";
-import { wireChat, syncPanelPositions } from "./modules/chat.js?v=2.8";
+} from "./modules/slip.js?v=2.9";
+import { wireChat, syncPanelPositions } from "./modules/chat.js?v=2.9";
 
 // ---------------------------------------------------------------- Detail Helpers
 function rerenderCurrentDetail() {
@@ -344,6 +344,13 @@ function checkProtocol() {
 // ---------------------------------------------------------------- Initialization
 async function init() {
   checkProtocol();
+  showListMobile();
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 768) {
+      $("#col-list")?.classList.remove("hidden-mobile");
+      $("#col-detail")?.classList.remove("hidden-mobile");
+    }
+  });
   wireStatic();
   wireChat(rerenderCurrentDetail);
   applyTranslations(isPicked, handleToggleSlip, handleDetailRefresh);

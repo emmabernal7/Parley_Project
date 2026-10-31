@@ -1,7 +1,7 @@
 // SportsQuant - DOM Rendering and UI Presentation Layer (ES Modules)
 
-import { state, I18N, $, $$, el, getSports, getTabOrder, toast } from "./state.js?v=2.8";
-import { setUserOdds } from "./api.js?v=2.8";
+import { state, I18N, $, $$, el, getSports, getTabOrder, toast } from "./state.js?v=2.9";
+import { setUserOdds } from "./api.js?v=2.9";
 
 // ---------------------------------------------------------------- Formatting
 export function decimalToAmerican(d) {

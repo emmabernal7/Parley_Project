@@ -1,7 +1,7 @@
 // SportsQuant - Bet Slip & Paper Bankroll Management (ES Modules)
 
-import { state, I18N, $, el, toast } from "./state.js?v=2.8";
-import { fmtOdds, fmtSel, translateGroupName, translateLabel } from "./render.js?v=2.8";
+import { state, I18N, $, el, toast } from "./state.js?v=2.9";
+import { fmtOdds, fmtSel, translateGroupName, translateLabel } from "./render.js?v=2.9";
 import {
   getSlip,
   addSlipLeg,
@@ -13,7 +13,7 @@ import {
   getBankrollSummary,
   deleteBet,
   clearAllBets,
-} from "./api.js?v=2.8";
+} from "./api.js?v=2.9";
 
 export function isPicked(gid, sid) {
   return state.slipLegs.some(
@@ -61,6 +61,13 @@ export async function refreshSlip(onDetailUpdate) {
     state.slipLegs = r.legs || [];
     const countEl = $("#slip-count");
     if (countEl) countEl.textContent = state.slipLegs.length;
+    const slipFabText = $("#slip-fab-text");
+    if (slipFabText) {
+      const isEs = state.lang === "es";
+      slipFabText.textContent = state.slipLegs.length 
+        ? (isEs ? `🎟 Boleta de Apuestas (${state.slipLegs.length})` : `🎟 Bet Slip (${state.slipLegs.length})`)
+        : (isEs ? "Boleta de Apuesta Simulada" : "Paper Bet Slip");
+    }
     const slipFab = $("#slip-fab");
     if (slipFab) slipFab.style.display = state.slipLegs.length ? "flex" : "none";
     const chatFab = $("#chat-fab");
