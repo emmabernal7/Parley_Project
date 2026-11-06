@@ -54,14 +54,17 @@ class Settings:
     odds_api_key: str = ""
     gemini_api_key: str = ""
     anthropic_api_key: str = ""
+    deepseek_api_key: str = ""
+    deepseek_model: str = "deepseek-chat"
+    deepseek_base_url: str = "https://api.deepseek.com"
     x_bearer_token: str = ""
     gemini_model: str = "gemini-2.5-flash"
     anthropic_model: str = "claude-sonnet-5"
-    llm_provider: str = "auto"                  # auto | gemini | anthropic | offline
+    llm_provider: str = "auto"                  # auto | deepseek | gemini | anthropic | offline
 
     def public(self) -> Dict[str, Any]:
         d = {f.name: getattr(self, f.name) for f in fields(self)}
-        for k in ("odds_api_key", "gemini_api_key", "anthropic_api_key", "x_bearer_token"):
+        for k in ("odds_api_key", "gemini_api_key", "anthropic_api_key", "deepseek_api_key", "x_bearer_token"):
             d[k] = bool(d[k])
         return d
 
@@ -82,7 +85,9 @@ def get_settings(reload: bool = False) -> Settings:
             if hasattr(s, k):
                 setattr(s, k, v)
     env_map = {"THE_ODDS_API_KEY": "odds_api_key", "ODDS_API_KEY": "odds_api_key", "GEMINI_API_KEY": "gemini_api_key",
-               "ANTHROPIC_API_KEY": "anthropic_api_key", "X_BEARER_TOKEN": "x_bearer_token", "SQ_DB": "db_path", "SQ_PORT": "port",
+               "ANTHROPIC_API_KEY": "anthropic_api_key", "DEEPSEEK_API_KEY": "deepseek_api_key",
+               "DEEPSEEK_MODEL": "deepseek_model", "DEEPSEEK_BASE_URL": "deepseek_base_url",
+               "X_BEARER_TOKEN": "x_bearer_token", "SQ_DB": "db_path", "SQ_PORT": "port",
                "PORT": "port", "SQ_HOST": "host", "HOST": "host",
                "SQ_SIM_SPEED": "sim_speed", "SQ_LLM": "llm_provider", "GEMINI_MODEL": "gemini_model",
                "ANTHROPIC_MODEL": "anthropic_model"}

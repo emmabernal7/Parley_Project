@@ -112,3 +112,25 @@ def test_data_status_and_social_status(client):
     assert client.get("/api/data-status").status_code == 200
     r = client.get("/api/social/status").json()
     assert r["enabled"] is False
+
+
+def test_deepseek_chat_integration(monkeypatch):
+    from sportsquant.chat.engine import DeepSeekChat, ChatEngine
+    from sportsquant.settings import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "deepseek_api_key", "sk-test-deepseek")
+    monkeypatch.setattr(s, "deepseek_model", "deepseek-chat")
+    monkeypatch.setattr(s, "deepseek_base_url", "https://api.deepseek.com")
+    monkeypatch.setattr(s, "llm_provider", "deepseek")
+
+    engine = ChatEngine(tools=None)
+    provider = engine._provider()
+    assert isinstance(provider, DeepSeekChat)
+    assert provider.endpoint_url() == "https://api.deepseek.com/chat/completions"
+
+    tools = provider._tools()
+    assert any(t["function"]["name"] == "get_covers_consensus" for t in tools)
+    assert any(t["function"]["name"] == "analyze_proposition" for t in tools)
+    assert any(t["function"]["name"] == "get_best_logros" for t in tools)
+

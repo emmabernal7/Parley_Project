@@ -560,6 +560,83 @@ class GeminiChat(_BaseLLMChat):
         return "I ran out of tool-call turns - try asking a simpler question."
 
 
+class DeepSeekChat(_BaseLLMChat):
+    """DeepSeek chat integration using DeepSeek's OpenAI-compatible API.
+    Supports deepseek-chat (DeepSeek-V3), deepseek-reasoner (DeepSeek-R1),
+    and local endpoints running DeepSeek models (Ollama/vLLM).
+    """
+
+    def endpoint_url(self) -> str:
+        s = get_settings()
+        base = (s.deepseek_base_url or "https://api.deepseek.com").rstrip("/")
+        if not base.endswith("/v1") and not base.endswith("/chat/completions"):
+            return f"{base}/chat/completions"
+        if base.endswith("/v1"):
+            return f"{base}/chat/completions"
+        return base
+
+    @staticmethod
+    def _tools():
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": t["name"],
+                    "description": t["description"],
+                    "parameters": t["input_schema"],
+                },
+            }
+            for t in TOOL_SPECS
+        ]
+
+    def reply(self, message: str, session: Dict) -> str:
+        s = get_settings()
+        history: List[dict] = session.setdefault("history_deepseek", [])
+        if not history:
+            history.append({"role": "system", "content": SYSTEM_PROMPT})
+        history.append({"role": "user", "content": message})
+
+        headers = {
+            "Authorization": f"Bearer {s.deepseek_api_key or 'deepseek'}",
+            "Content-Type": "application/json",
+        }
+        tools = self._tools()
+
+        for _ in range(5):
+            body = {
+                "model": s.deepseek_model,
+                "messages": history,
+                "tools": tools,
+                "temperature": 0.3,
+            }
+            r = requests.post(self.endpoint_url(), headers=headers, json=body, timeout=30)
+            r.raise_for_status()
+            data = r.json()
+            choice = data["choices"][0]
+            msg = choice["message"]
+            history.append(msg)
+
+            tool_calls = msg.get("tool_calls")
+            if not tool_calls:
+                return msg.get("content") or "..."
+
+            for tc in tool_calls:
+                fn_name = tc.get("function", {}).get("name", "")
+                raw_args = tc.get("function", {}).get("arguments", "{}")
+                try:
+                    args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
+                except Exception:
+                    args = {}
+                out = self._dispatch(fn_name, args)
+                history.append({
+                    "role": "tool",
+                    "tool_call_id": tc.get("id", ""),
+                    "content": json.dumps(out, default=str),
+                })
+
+        return "Alcancé el límite de llamadas a herramientas. Intenta una consulta más específica."
+
+
 # ============================================================================ engine
 class ChatEngine:
     def __init__(self, tools: ToolBox, max_sessions: int = 500, ttl_seconds: float = 86400.0):
@@ -605,10 +682,15 @@ class ChatEngine:
         want = s.llm_provider
         if want == "offline":
             return None
+        # DeepSeek is prioritized for quantitative reasoning
+        if (want in ("auto", "deepseek")) and s.deepseek_api_key:
+            return DeepSeekChat(self.tools, self.offline)
         if (want in ("auto", "anthropic")) and s.anthropic_api_key:
             return AnthropicChat(self.tools, self.offline)
         if (want in ("auto", "gemini")) and s.gemini_api_key:
             return GeminiChat(self.tools, self.offline)
+        if want == "deepseek":
+            return DeepSeekChat(self.tools, self.offline)
         return None
 
     def reply(self, session_id: str, message: str) -> Dict:
