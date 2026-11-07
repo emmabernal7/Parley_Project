@@ -610,6 +610,12 @@ class DeepSeekChat(_BaseLLMChat):
                 "temperature": 0.3,
             }
             r = requests.post(self.endpoint_url(), headers=headers, json=body, timeout=30)
+            if r.status_code == 402:
+                log.warning("DeepSeek API: Insufficient Balance. Please top up at https://platform.deepseek.com/top_up")
+                raise requests.exceptions.HTTPError("DeepSeek Insufficient Balance", response=r)
+            if r.status_code == 401:
+                log.warning("DeepSeek API: Invalid API Key.")
+                raise requests.exceptions.HTTPError("DeepSeek Invalid API Key", response=r)
             r.raise_for_status()
             data = r.json()
             choice = data["choices"][0]
@@ -706,6 +712,8 @@ class ChatEngine:
         except Exception as e:
             log.warning("chat provider failed (%s), falling back to offline: %s", used, e)
             text = self.offline.reply(message, session)
+            if "Insufficient Balance" in str(e) or (hasattr(e, "response") and getattr(e.response, "status_code", None) == 402):
+                text += "\n\n⚠️ *(Aviso: Tu cuenta de DeepSeek no tiene saldo disponible; respondiendo con el motor cuantitativo local. Recarga saldo en platform.deepseek.com para activar DeepSeek)*"
             used = "offline (fallback)"
         self._save_session(session_id, session)
         return {"reply": text, "provider": used}

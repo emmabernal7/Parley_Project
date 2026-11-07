@@ -5,6 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 os.environ.setdefault("SQ_PROVIDERS", "sim")
+os.environ["SQ_LLM"] = "offline"
 
 import pytest
 
