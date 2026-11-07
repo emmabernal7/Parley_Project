@@ -3,10 +3,18 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 import webbrowser
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+        sys.stderr.reconfigure(line_buffering=True)
+    except Exception:
+        pass
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
@@ -50,6 +58,13 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 @app.get("/")
 def index():
     return FileResponse(str(STATIC_DIR / "index.html"))
+
+
+@app.get("/health")
+@app.get("/healthz")
+def health_check():
+    return {"status": "ok"}
+
 
 
 @app.get("/favicon.ico", include_in_schema=False)
