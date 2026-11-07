@@ -589,9 +589,32 @@ class DeepSeekChat(_BaseLLMChat):
             for t in TOOL_SPECS
         ]
 
+    @staticmethod
+    def _sanitize_history(raw_history: List[dict]) -> List[dict]:
+        clean = []
+        for i, m in enumerate(raw_history):
+            role = m.get("role")
+            if role == "assistant" and m.get("tool_calls"):
+                # Ensure every tool_call in this message has a subsequent tool response
+                expected_ids = {tc["id"] for tc in m.get("tool_calls", []) if "id" in tc}
+                found_ids = set()
+                for next_m in raw_history[i + 1:]:
+                    if next_m.get("role") == "tool":
+                        found_ids.add(next_m.get("tool_call_id"))
+                    elif next_m.get("role") in ("user", "assistant"):
+                        break
+                if expected_ids and not expected_ids.issubset(found_ids):
+                    # Unfinished/broken tool call sequence: keep content if any, drop invalid tool_calls
+                    if m.get("content"):
+                        clean.append({"role": "assistant", "content": m["content"]})
+                    continue
+            clean.append(m)
+        return clean
+
     def reply(self, message: str, session: Dict) -> str:
         s = get_settings()
-        history: List[dict] = session.setdefault("history_deepseek", [])
+        raw_history: List[dict] = session.setdefault("history_deepseek", [])
+        history = self._sanitize_history(raw_history)
         if not history:
             history.append({"role": "system", "content": SYSTEM_PROMPT})
         history.append({"role": "user", "content": message})
@@ -616,7 +639,10 @@ class DeepSeekChat(_BaseLLMChat):
             if r.status_code == 401:
                 log.warning("DeepSeek API: Invalid API Key.")
                 raise requests.exceptions.HTTPError("DeepSeek Invalid API Key", response=r)
-            r.raise_for_status()
+            if r.status_code >= 400:
+                log.error("DeepSeek API HTTP %s: %s", r.status_code, r.text)
+                r.raise_for_status()
+
             data = r.json()
             choice = data["choices"][0]
             msg = choice["message"]
@@ -624,6 +650,7 @@ class DeepSeekChat(_BaseLLMChat):
 
             tool_calls = msg.get("tool_calls")
             if not tool_calls:
+                session["history_deepseek"] = history
                 return msg.get("content") or "..."
 
             for tc in tool_calls:
@@ -640,6 +667,7 @@ class DeepSeekChat(_BaseLLMChat):
                     "content": json.dumps(out, default=str),
                 })
 
+        session["history_deepseek"] = history
         return "Alcancé el límite de llamadas a herramientas. Intenta una consulta más específica."
 
 
