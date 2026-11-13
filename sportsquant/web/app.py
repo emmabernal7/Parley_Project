@@ -120,6 +120,9 @@ class OddsBody(BaseModel):
 @app.post("/api/event/{event_id}/odds")
 def set_user_odds(event_id: str, body: OddsBody):
     state["store"].set_user_odds(event_id, body.key, body.odds)
+    if "live" in state:
+        state["live"]._last_user_odds_check = 0.0
+        state["live"]._main_market_cache.pop(event_id, None)
     return {"ok": True}
 
 

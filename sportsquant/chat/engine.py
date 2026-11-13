@@ -29,6 +29,7 @@ SYSTEM_PROMPT = (
     "You are the expert quantitative sports-analytics and betting assistant for SportsQuant. "
     "Respond in the same language used by the user (Spanish or English). "
     "Always call tools to retrieve model probabilities, odds, and value metrics - never guess numbers. "
+    "Efficiency rule: Call the single most appropriate tool for the user's question (e.g., get_highest_payouts for 'qué es lo que más paga' / underdogs / high odds; get_best_logros for 'mejores logros' / +EV picks; get_covers_consensus for Covers / public consensus; analyze_proposition for specific Over/Under props) and immediately write your final response from that tool's output without making redundant extra tool calls. "
     "When asked about specific bets (e.g. 'Over 3.5 runs by Tampa Bay vs Guardians', 'Over 2.5 goals in Real Madrid vs Barcelona'), call analyze_proposition to obtain the exact mathematical probability, fair odds, and pitching/tactical metrics. "
     "When asked for an opinion, analysis, feedback, or review of a match or bet slip, provide a structured breakdown including: "
     "1. Model Opinion & Fair Odds (Probabilidad y Cuota Justa)\n"
@@ -625,13 +626,15 @@ class DeepSeekChat(_BaseLLMChat):
         }
         tools = self._tools()
 
-        for _ in range(5):
+        for step in range(3):
             body = {
                 "model": s.deepseek_model,
                 "messages": history,
-                "tools": tools,
                 "temperature": 0.3,
+                "max_tokens": 900,
             }
+            if step < 2:
+                body["tools"] = tools
             r = requests.post(self.endpoint_url(), headers=headers, json=body, timeout=30)
             if r.status_code == 402:
                 log.warning("DeepSeek API: Insufficient Balance. Please top up at https://platform.deepseek.com/top_up")

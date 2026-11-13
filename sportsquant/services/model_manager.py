@@ -252,7 +252,7 @@ class ModelManager:
         match = best_match(name, model.teams_)
         return (match, True) if match else (name, False)
 
-    def soccer_pricer(self, ev: Event) -> SoccerPricer:
+    def soccer_pricer(self, ev: Event, include_counts: bool = True) -> SoccerPricer:
         if ev.source == "demo":
             lam, mu, rho = ev.meta["lam"], ev.meta["mu"], ev.meta["rho"]
             return SoccerPricer(ev.home, ev.away, lam, mu, rho, model_label="Demo prior (illustrative, not fitted)",
@@ -272,8 +272,8 @@ class ModelManager:
                 lam, mu = model.rates(h, a)
                 conf = "ok"
                 label = f"Dixon-Coles fitted on {model.n_matches_} matches"
-                cards = self._count_market(self.card_models.get(league_key), h, a, ev.referee)
-                corners = self._count_market(self.corner_models.get(league_key), h, a, None)
+                cards = self._count_market(self.card_models.get(league_key), h, a, ev.referee) if include_counts else None
+                corners = self._count_market(self.corner_models.get(league_key), h, a, None) if include_counts else None
                 return SoccerPricer(ev.home, ev.away, lam, mu, model.rho_, cards=cards, corners=corners,
                                     model_label=label, confidence=conf)
 

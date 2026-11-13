@@ -85,6 +85,10 @@ class SoccerPricer:
     def dist(self, st: SoccerState) -> ScoreDist:
         if st.phase == "pre":
             return ScoreDist(self.g_pre)
+        if st.phase == "ft":
+            G = np.zeros((self.p.max_extra + 1, self.p.max_extra + 1))
+            G[0, 0] = 1.0
+            return ScoreDist(G, st.home, st.away)
         return inplay_dist(self.lam, self.mu, st, self.p, self.scale, self.tilt)
 
     def info(self, st: SoccerState) -> Dict:

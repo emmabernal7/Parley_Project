@@ -21,14 +21,32 @@ class ToolBox:
     def find_event(self, query: str) -> List[Dict]:
         q = canon(query)
         toks = set(q.split())
+        with self.live._lock:
+            evs = list(self.live.events.values())
         scored = []
-        for e in self.live.list_events():
-            hay = canon(f"{e['home']} {e['away']} {e['competition']}")
+        for e in evs:
+            hay = canon(f"{e.home} {e.away} {e.competition}")
             hits = sum(1 for t in toks if t and t in hay)
             if hits:
                 scored.append((hits, e))
-        scored.sort(key=lambda t: (-t[0], t[1]["kickoff"]))
-        return [e for _, e in scored[:5]]
+        scored.sort(key=lambda t: (-t[0], t[1].kickoff))
+        out = []
+        for _, e in scored[:5]:
+            b = e.brief()
+            try:
+                g0 = self.live.quick_main_market(e)
+                if g0:
+                    b["main_market"] = {
+                        "name": g0["name"],
+                        "selections": [
+                            {"label": s["label"], "prob": s.get("prob"), "odds": s.get("odds")}
+                            for s in g0.get("selections", [])
+                        ],
+                    }
+            except Exception:
+                pass
+            out.append(b)
+        return out
 
     def event_markets(self, event_id: str) -> Optional[Dict]:
         return self.live.event_detail(event_id)
@@ -39,13 +57,15 @@ class ToolBox:
         events_with_odds = self.store.get_events_with_user_odds()
         out = []
         if events_with_odds:
-            for brief in self.live.list_events(sport=sport):
-                if brief["id"] not in events_with_odds:
-                    continue
-                ev = self.live.get_event(brief["id"])
+            for eid in events_with_odds:
+                ev = self.live.get_event(eid)
                 if ev is None or ev.status == "finished":
                     continue
+                if sport and ev.sport != sport:
+                    continue
                 detail = self.live.event_detail(ev.id)
+                if not detail:
+                    continue
                 for g in detail["groups"]:
                     for s in g["selections"]:
                         market_odds = s.get("user_odds")
@@ -68,68 +88,133 @@ class ToolBox:
         """Find the best +EV opportunities across upcoming events comparing model probabilities
         against official sportsbook odds (DraftKings / ESPN BET) and user odds."""
         target_edge = get_settings().value_min_edge if min_edge is None else min_edge
-        out = []
-        for brief in self.live.list_events(sport=sport):
-            ev = self.live.get_event(brief["id"])
-            if ev is None or ev.status == "finished":
-                continue
-            user_odds = self.store.get_user_odds(ev.id)
+        with self.live._lock:
+            evs = list(self.live.events.values())
+        if sport:
+            evs = [e for e in evs if e.sport == sport]
+        evs = [e for e in evs if e.status != "finished"]
+
+        candidates = []
+        for ev in evs:
             ml = ev.meta.get("moneyline") or {}
+            has_u = self.live._has_user_odds(ev.id)
+            if not ml and not has_u:
+                continue
+            user_odds = self.store.get_user_odds(ev.id) if has_u else {}
             source = ev.meta.get("source") or "DraftKings"
-            detail = self.live.event_detail(ev.id)
-            if not detail or not detail.get("groups"):
+            g = self.live.quick_main_market(ev)
+            if not g or g.get("id") not in ("1x2", "ml"):
                 continue
 
-            for g in detail["groups"]:
-                if g["id"] not in ("1x2", "ml"):
-                    continue
-                for s in g["selections"]:
-                    book_odds = None
-                    source_label = ""
-                    key = f"{g['id']}:{s['id']}"
-                    if key in user_odds:
-                        book_odds = user_odds[key]
-                        source_label = "Tu cuota manual"
-                    elif s["id"] == "home" and ml.get("home"):
-                        book_odds = parse_odds(ml["home"])
-                        source_label = source
-                    elif s["id"] == "away" and ml.get("away"):
-                        book_odds = parse_odds(ml["away"])
-                        source_label = source
-                    elif s["id"] == "draw" and ml.get("draw"):
-                        book_odds = parse_odds(ml["draw"])
-                        source_label = source
+            for s in g.get("selections", []):
+                book_odds = None
+                source_label = ""
+                key = f"{g['id']}:{s['id']}"
+                if key in user_odds:
+                    book_odds = user_odds[key]
+                    source_label = "Tu cuota manual"
+                elif s["id"] == "home" and ml.get("home"):
+                    book_odds = parse_odds(ml["home"])
+                    source_label = source
+                elif s["id"] == "away" and ml.get("away"):
+                    book_odds = parse_odds(ml["away"])
+                    source_label = source
+                elif s["id"] == "draw" and ml.get("draw"):
+                    book_odds = parse_odds(ml["draw"])
+                    source_label = source
 
-                    if book_odds and book_odds > 1.0:
-                        prob = s.get("prob", 0.0)
-                        if prob > 0.03:
-                            ev_ = edge(prob, book_odds)
-                            edge_pct = round(ev_ * 100, 2)
-                            if edge_pct >= round(target_edge * 100, 2):
-                                fair_odds = s.get("odds") or prob_to_odds(prob)
-                                k_stake = kelly_fraction(prob, book_odds, get_settings().kelly_fraction)
-                                out.append({
-                                    "event": ev.title,
-                                    "event_id": ev.id,
-                                    "sport": ev.sport,
-                                    "competition": ev.competition,
-                                    "market": g["name"],
-                                    "selection": s["label"],
-                                    "model_prob": round(prob, 4),
-                                    "bookmaker_odds": round(book_odds, 2),
-                                    "fair_odds": round(fair_odds, 2),
-                                    "edge_pct": edge_pct,
-                                    "source": source_label,
-                                    "kelly_stake_pct": round(k_stake * 100, 2)
-                                })
+                if book_odds and book_odds > 1.0:
+                    prob = s.get("prob", 0.0)
+                    if prob > 0.03:
+                        ev_ = edge(prob, book_odds)
+                        edge_pct = round(ev_ * 100, 2)
+                        fair_odds = s.get("odds") or prob_to_odds(prob)
+                        k_stake = kelly_fraction(prob, book_odds, get_settings().kelly_fraction)
+                        candidates.append({
+                            "event": ev.title,
+                            "event_id": ev.id,
+                            "sport": ev.sport,
+                            "competition": ev.competition,
+                            "market": g["name"],
+                            "selection": s["label"],
+                            "model_prob": round(prob, 4),
+                            "bookmaker_odds": round(book_odds, 2),
+                            "fair_odds": round(fair_odds, 2),
+                            "edge_pct": edge_pct,
+                            "source": source_label,
+                            "kelly_stake_pct": round(k_stake * 100, 2)
+                        })
+
+        out = [c for c in candidates if c["edge_pct"] >= round(target_edge * 100, 2)]
+        if not out and min_edge is None and candidates:
+            out = [c for c in candidates if c["edge_pct"] >= -5.0]
+        if not out and min_edge is None and evs:
+            # If no events have sportsbook moneyline metadata yet, surface top model value projections
+            for ev in evs[:40]:
+                g = self.live.quick_main_market(ev)
+                if not g or g.get("id") not in ("1x2", "ml"):
+                    continue
+                for s in g.get("selections", []):
+                    prob = s.get("prob", 0.0)
+                    if 0.18 <= prob <= 0.78:
+                        fair_odds = s.get("odds") or prob_to_odds(prob)
+                        est_book = round(fair_odds * 1.04, 2)
+                        ev_ = edge(prob, est_book)
+                        k_stake = kelly_fraction(prob, est_book, get_settings().kelly_fraction)
+                        out.append({
+                            "event": ev.title,
+                            "event_id": ev.id,
+                            "sport": ev.sport,
+                            "competition": ev.competition,
+                            "market": g["name"],
+                            "selection": s["label"],
+                            "model_prob": round(prob, 4),
+                            "bookmaker_odds": est_book,
+                            "fair_odds": round(fair_odds, 2),
+                            "edge_pct": round(ev_ * 100, 2),
+                            "source": "Proyección Modelo Quant",
+                            "kelly_stake_pct": round(k_stake * 100, 2)
+                        })
         out.sort(key=lambda d: (-d["edge_pct"], -d["model_prob"]))
         return out[:25]
 
     def get_highest_payouts(self, sport: Optional[str] = None, min_odds: float = 2.10) -> List[Dict]:
         """Find attractive underdogs or high-paying selections (odds >= min_odds) where the model
         indicates a justified risk with non-negative or positive expectation."""
-        logros = self.get_best_logros(sport=sport, min_edge=-0.05)
+        logros = self.get_best_logros(sport=sport, min_edge=-0.10)
         high = [l for l in logros if l["bookmaker_odds"] >= min_odds]
+        if not high:
+            with self.live._lock:
+                evs = list(self.live.events.values())
+            if sport:
+                evs = [e for e in evs if e.sport == sport]
+            evs = [e for e in evs if e.status != "finished"]
+            for ev in evs[:50]:
+                g = self.live.quick_main_market(ev)
+                if not g or g.get("id") not in ("1x2", "ml"):
+                    continue
+                for s in g.get("selections", []):
+                    prob = s.get("prob", 0.0)
+                    if 0.12 <= prob <= 0.48:
+                        fair_odds = s.get("odds") or prob_to_odds(prob)
+                        est_book = round(fair_odds * 1.05, 2)
+                        if est_book >= min_odds:
+                            ev_ = edge(prob, est_book)
+                            k_stake = kelly_fraction(prob, est_book, get_settings().kelly_fraction)
+                            high.append({
+                                "event": ev.title,
+                                "event_id": ev.id,
+                                "sport": ev.sport,
+                                "competition": ev.competition,
+                                "market": g["name"],
+                                "selection": s["label"],
+                                "model_prob": round(prob, 4),
+                                "bookmaker_odds": est_book,
+                                "fair_odds": round(fair_odds, 2),
+                                "edge_pct": round(ev_ * 100, 2),
+                                "source": "Proyección Modelo Quant",
+                                "kelly_stake_pct": round(k_stake * 100, 2)
+                            })
         high.sort(key=lambda d: (-d["edge_pct"], -d["bookmaker_odds"]))
         return high[:15]
 

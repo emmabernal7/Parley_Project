@@ -175,9 +175,15 @@ class LiveManager:
                     return g0
 
         if ev.sport == "soccer":
-            pr = self.models.soccer_pricer(ev)
+            pr = self.models.soccer_pricer(ev, include_counts=False)
             st = state_from_event(ev)
             g0 = pr.main_market(st)
+        elif ev.sport == "tennis":
+            eng = self.models.tennis_engine(ev)
+            g0 = eng.main_market(ev)
+        elif ev.sport == "volleyball":
+            eng = self.models.volleyball_engine(ev)
+            g0 = eng.main_market(ev)
         else:
             p = self.price(ev)
             g0 = p["groups"][0] if (p and p.get("groups")) else None

@@ -14,8 +14,22 @@ class VolleyballEngine:
     def __init__(self, a: str, b: str, p_win_a: float, best_of: int = 5, model_label: str = "Elo + rally Markov chain",
                  confidence: str = "ok"):
         self.a, self.b, self.best_of = a, b, best_of
-        self.p = rally_prob_for_win(p_win_a, best_of)
+        self.p_win_a = float(min(0.995, max(0.005, p_win_a)))
+        self._p: float | None = None
         self.model_label, self.confidence = model_label, confidence
+
+    @property
+    def p(self) -> float:
+        if self._p is None:
+            self._p = rally_prob_for_win(self.p_win_a, self.best_of)
+        return self._p
+
+    def main_market(self, ev: Event) -> Dict:
+        if ev.status == "live" and ev.live.get("sets") is not None:
+            return self.markets(ev)[0]
+        pa = 1.0 if (ev.status == "finished" and ev.score[0] > ev.score[1]) else (
+             0.0 if (ev.status == "finished" and ev.score[1] > ev.score[0]) else self.p_win_a)
+        return finalize([group("ml", "Match Winner", "main", [sel("a", self.a, pa), sel("b", self.b, 1 - pa)], kind="2way")])[0]
 
     def info(self, ev: Event) -> Dict:
         return {"model": self.model_label, "confidence": self.confidence, "rally_prob": self.p}
