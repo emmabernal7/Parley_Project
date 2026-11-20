@@ -67,7 +67,11 @@ def parse_odds(text: object) -> Optional[float]:
         return None
     if isinstance(text, (int, float)):
         val = float(text)
-        return val if val > 1.0 and math.isfinite(val) else None
+        if not math.isfinite(val):
+            return None
+        if abs(val) >= 100.0:
+            return american_to_decimal(val)
+        return val if val > 1.0 else None
     s = str(text).strip().replace(",", ".").replace(" ", "")
     if not s:
         return None
@@ -82,6 +86,8 @@ def parse_odds(text: object) -> Optional[float]:
             v = float(s)
             return american_to_decimal(v) if abs(v) >= 100 else None
         v = float(s)
+        if abs(v) >= 100.0:
+            return american_to_decimal(v)
         return v if v > 1.0 else None
     except ValueError:
         return None
